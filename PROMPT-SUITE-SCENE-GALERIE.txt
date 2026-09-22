@@ -1,0 +1,122 @@
+Tu reprends VISIONNARY, une application de préparation et de suivi terrain pour des tournages
+vidéo/photo de mariage (React 19 + TypeScript + Vite, sans backend obligatoire, données locales
+dans IndexedDB du navigateur). AVANT de commencer :
+
+1. Lis HANDOFF-IA.md à la racine du dépôt (mariageafro/visionnary-app), puis docs/REPRISE.md
+   (journal daté, source de vérité sur ce qui a déjà été fait).
+2. npm install && npm run verifier — doit être vert avant de toucher au code.
+3. Teste sur http://127.0.0.1:4730 (npm run dev). Ne JAMAIS écrire sur http://localhost:4730,
+   c'est l'origine où vivent les vraies données du mariage d'un client, en lecture seule.
+4. Le site public (mariageafro.github.io/visionnary-app/) charge une démo automatiquement à
+   l'arrivée (Welcome.tsx, uniquement en production) — c'est voulu.
+
+Voici les chantiers demandés, dans l'ordre où ils comptent le plus.
+
+## 1. Galerie photographe — découper les catégories, pas juste « Couple »
+
+`src/screens/PoseBoard.tsx` + `poseCategories` dans `src/model.ts`. Les catégories actuelles
+(Mariée seule, Couple, Famille…) sont trop larges. Les détailler comme une vraie shot-list
+photographe, par ex. :
+- Mariée seule · Marié seul
+- Mariée + demoiselles d'honneur · Marié + garçons d'honneur
+- Couple seul · Couple + cortège complet
+- Photo de famille (côté mariée / côté marié / réunies)
+- Photo de groupe (tous les invités, ou par table)
+
+Chaque catégorie doit avoir un **titre de section visible** au-dessus de ses photos dans le mur
+(comme les sections « LIEU & DÉCOR », « CÉRÉMONIE »… déjà dans `src/screens/Shots.tsx` — reprendre
+exactement ce motif plutôt qu'en inventer un nouveau), pas seulement des filtres à cliquer sur le
+côté. Le nombre de photos prévues par section doit être visible (« 3/12 » par ex., déjà fait
+ailleurs dans l'app — `stageStats.ts` a le pattern de comptage à réutiliser).
+
+## 2. Visionneuse plein écran — généraliser le bouton « cacher les infos »
+
+Déjà fait sur les poses (`PoseBoard.tsx`, `PoseViewer`, classe `.info-hidden` dans
+`src/screens/references.css`). À étendre à :
+- `src/screens/ShotViewer.tsx` (fiche plan plein écran)
+- `src/scene/CameraCard.tsx` (fiche caméra plein écran)
+- Le panneau du Scene Designer lui-même (`src/scene/SceneDesigner.tsx`) — un mode où l'inspecteur
+  se replie complètement pour ne garder que la toile et la lecture.
+
+Objectif : dès qu'on a lu l'essentiel, un tap doit rendre presque tout l'écran à l'image/la scène.
+
+## 3. Thème clair en option
+
+Aujourd'hui : Studio (sombre), Terrain (clair, pensé plein soleil, boutons plus gros), Nuit (très
+sombre). L'utilisateur veut un vrai choix « thème plus blanc » indépendant du mode Terrain (qui
+change aussi la taille des boutons). Ajouter un thème clair « confort » à `src/theme.css`
+(`:root[data-theme="clair"]` ou similaire, à distinguer du mode Terrain existant) et un sélecteur
+dans `src/screens/Tools.tsx` (où vivent déjà les réglages Studio/Terrain/Nuit).
+
+## 4. Scene Designer — rendre les gestes évidents (le plus gros chantier)
+
+`src/scene/SceneCanvas.tsx`, `src/scene/Inspector.tsx`, `src/scene/nodes.tsx`, `src/scene/ops.ts`.
+L'utilisateur trouve ça « difficile à comprendre ». Tout existe déjà en dessous (rotation, glisser,
+mouvements de caméra push-in/pull-out/travelling/orbit/drone dans `src/scene/motion.ts` et
+`catalog.ts`) — le problème est la **découvrabilité**, pas la mécanique. Pistes concrètes :
+- Poignées de rotation et de déplacement plus visibles/plus grandes au premier contact avec un
+  élément (actuellement discrètes, cf. `.sd-handle` dans `scene.css`).
+- Un mini-guide ou une infobulle contextuelle la première fois qu'on sélectionne une caméra,
+  expliquant en une phrase : glisser = déplacer, poignée ronde = tourner, bouton mouvement =
+  choisir push/pull/travelling/orbit/drone.
+- Vérifier que régler la durée totale de la scène et la vitesse d'un mouvement (déjà dans
+  `TimelinePanel`/`usePlayback.ts`) est repérable sans devoir ouvrir plusieurs panneaux.
+
+### Référence visuelle par caméra — déjà là, mais pas assez visible
+
+`el.referenceId` (photo/frame/vidéo épinglée) et `el.shotIds` (plans liés) existent déjà
+(`src/scene/types.ts`, `CameraCard.tsx`, `Inspector.tsx`). Vérifier que le bouton « Épingler une
+photo, une frame ou une vidéo » est visible sans repli/scroll dès qu'on sélectionne une caméra —
+l'utilisateur ne l'a pas trouvé. Idée : afficher la vignette de référence (si posée) directement
+sur l'élément caméra dans la toile, pas seulement dans l'inspecteur.
+
+### Sauvegarder un mouvement comme un plan à tourner — déjà fait, à populariser
+
+Bouton « Enregistrer ce mouvement comme un plan à tourner » déjà en place dans
+`Inspector.tsx`/`SceneDesigner.tsx` (`onCreateShot`) : crée un vrai plan lié (`shotIds`) dans le
+déroulé. L'utilisateur ne l'a pas remarqué non plus — le rendre plus visible (peut-être un bouton
+gold plus en évidence, pas caché dans une section repliée).
+
+### Mises en situation réalistes à enrichir
+
+Le plan de scène « Cérémonie religieuse » de la démo a déjà 4 caméras avec missions détaillées
+(voir `src/scene/templates.ts` pour les modèles de scène existants — cérémonie 4 caméras, salle,
+first look, flashmob). Compléter/vérifier la cohérence des templates pour :
+- Vœux : deux caméras en champ-contrechamp sur le couple face à face, une caméra d'ensemble
+  tête-aux-pieds, une caméra sur les réactions du public.
+- First look : mariée de dos qui attend, la personne qui s'approche et lui touche l'épaule,
+  caméra sur la réaction de chacun avant et pendant le retournement.
+- Mairie, cérémonie religieuse, flashmob : chacun son propre plan de scène type, pas un seul
+  générique — `templates.ts` a déjà la structure pour ça, vérifier que chaque étape du mariage en
+  a un plutôt que de tout regrouper.
+Objectif : que le mode lecture (bouton play, en boucle) de chaque plan de scène donne un aperçu
+clair du dispositif avant le jour J, référence visuelle épinglée par caméra à l'appui.
+
+## 5. Catégories mariée/marié/ensemble — même granularité que le point 1
+
+S'applique aussi aux filtres de l'accueil (`src/screens/MissionBoard.tsx`, onglets Tous/Mariée/
+Marié/Ensemble) : ajouter Garçons d'honneur, Demoiselles d'honneur, Famille, Groupe comme
+sous-filtres ou tags combinables, cohérent avec le découpage du point 1.
+
+## 6. Collaboration en ligne — déjà documenté, pas encore fait
+
+L'utilisateur veut modifier en local et voir la version web se mettre à jour automatiquement,
+sans repasser par une IA à chaque fois — et que son équipe puisse éditer aussi (cocher des tâches,
+ajouter des plans), pas juste consulter. **Le site statique actuel ne peut pas faire ça.** Le
+serveur qui le permet existe déjà et est prêt pour de l'hébergement cloud : voir
+`docs/DEPLOY-SERVEUR.md` pour l'état exact et ce qu'il reste à faire (un hébergeur avec disque
+persistant, à choisir et payer — pas quelque chose qu'une IA peut faire seule, ça demande un
+compte et un choix de coût que l'utilisateur doit valider lui-même).
+
+## 7. Couverture de projet (photo du couple)
+
+Vérifier `src/screens/Shoot.tsx` (`cover`/`coverId`) : un visiteur doit voir en un coup d'œil quel
+couple/projet il regarde. Si ce n'est pas déjà clair visuellement sur la fiche tournage et dans la
+liste « Mes tournages », l'améliorer.
+
+## Règles à ne pas casser (détail complet dans HANDOFF-IA.md)
+
+Tout en français. Thème sombre par défaut (le nouveau thème clair est une option, pas un
+remplacement). Chemins d'assets relatifs, jamais absolus. Rien ne s'efface sans confirmation.
+`npm run verifier` vert avant et après chaque changement. Une entrée datée dans docs/REPRISE.md
+à la fin de la session décrivant ce qui a été fait et vérifié.
