@@ -1,0 +1,67 @@
+.shoot-cover {
+  position: relative;
+  overflow: hidden;
+  min-height: 210px;
+  border-radius: var(--radius);
+  background: var(--bg-3);
+}
+.shoot-cover-img,
+.shoot-cover .thumb.shoot-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  object-fit: cover;
+}
+.shoot-cover-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #0000 25%, #000d 100%);
+}
+.shoot-cover-text {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.shoot-cover-text h2 {
+  font-size: 24px;
+  color: #fff;
+}
+.shoot-cover-text p {
+  color: #e8e1d3;
+  font-size: 14px;
+}
+.shoot-j {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.must-grid {
+  display: grid;
+  gap: 10px;
+}
+.must {
+  display: grid;
+  gap: 4px;
+}
+.must svg {
+  color: var(--gold-2);
+}
+.must p {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+@media (min-width: 700px) {
+  .must-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .shoot-cover {
+    min-height: 280px;
+  }
+}

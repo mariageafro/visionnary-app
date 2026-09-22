@@ -1,0 +1,74 @@
+.home-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top) + 18px) 2px 16px;
+}
+.home-head h1 {
+  font-size: 24px;
+}
+.next-shoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--ivory);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.next-shoot .row-main strong {
+  font-size: 17px;
+}
+.next-shoot .row-main small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.jourj-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.jourj-banner div {
+  flex: 1;
+}
+.jourj-banner strong {
+  display: block;
+  font-size: 18px;
+}
+.live-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 30%, transparent);
+  animation: pulse 1.6s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+.home-jourj {
+  margin-top: 18px;
+}
+@media (min-width: 960px) {
+  .home-jourj {
+    display: none;
+  }
+  .home-head {
+    padding-top: 36px;
+  }
+  .home-head h1 {
+    font-size: 30px;
+  }
+}

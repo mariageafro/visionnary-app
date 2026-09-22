@@ -1,0 +1,134 @@
+/* Import de photos et vidéos : voile de dépôt, aperçus immédiats, progression vivante. */
+.drop-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+  animation: veil-in 0.18s ease-out;
+}
+.drop-veil > div {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(520px, 100%);
+  padding: 42px 24px;
+  border-radius: 24px;
+  border: 2px dashed var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, var(--bg-2));
+  text-align: center;
+  color: var(--text);
+}
+.drop-veil svg {
+  color: var(--gold);
+}
+.drop-veil strong {
+  font-family: var(--display);
+  font-size: 22px;
+}
+.drop-veil span {
+  color: var(--text-2);
+}
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+}
+.import-progress {
+  position: fixed;
+  z-index: 90;
+  right: 16px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  box-shadow: var(--shadow);
+  animation: veil-in 0.2s ease-out;
+}
+@media (min-width: 960px) {
+  .import-progress {
+    bottom: 24px;
+  }
+}
+.import-head {
+  display: grid;
+  gap: 8px;
+}
+.import-thumbs,
+.import-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+.import-previews {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+}
+.import-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--bg-3);
+  color: var(--text-2);
+}
+.import-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
+}
+.import-thumb.is-attente img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.import-thumb.is-import img {
+  opacity: 0.7;
+}
+.import-thumb.is-import::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--gold);
+  border-radius: 9px;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+.import-thumb.is-erreur {
+  outline: 2px solid var(--red);
+}
+.import-thumb > svg:last-child:not(:first-child) {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+}
+.import-more {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 9px;
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.35;
+  }
+}

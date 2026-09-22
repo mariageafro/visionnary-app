@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-ghpages/
+tsconfig.tsbuildinfo
+data/
+playwright-report/
+test-results/
+.DS_Store
+test-media/

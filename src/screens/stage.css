@@ -1,0 +1,705 @@
+/* Écran d'une étape : frise par moment, côté mariée et côté marié côte à côte dès la tablette. */
+.frise {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+.frise-sides {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .frise-sides {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+}
+.track {
+  --side: var(--gold);
+  min-width: 0;
+  padding: 12px 12px 0;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  border-top: 3px solid var(--side);
+}
+.track.side-bride {
+  --side: #e79bb3;
+}
+.track.side-groom {
+  --side: #7fb2ea;
+}
+.track.is-over {
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+  border-top-color: var(--side);
+}
+.track-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 12px;
+}
+.track-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--side);
+  flex-shrink: 0;
+}
+.track-head strong {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+}
+.track-head small {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.track-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 16%, var(--bg-2));
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.track-alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--red);
+}
+
+/* Un moment = un jalon sur le rail : point d'état, horaire, nom, puis ses plans en bande. */
+.moment {
+  position: relative;
+  min-width: 0;
+  padding: 0 0 18px 22px;
+}
+.moment::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 26px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--line-dark);
+}
+.moment:last-child::before {
+  display: none;
+}
+.moment::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-2);
+  background: var(--bg-2);
+}
+.moment.state-en-cours::after {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 45%, var(--bg-2));
+}
+.moment.state-fait::after {
+  border-color: var(--green);
+  background: var(--green);
+}
+.moment-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+.moment-time {
+  flex-shrink: 0;
+  width: 78px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 99px;
+  border: 1px solid var(--line-dark);
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.moment-time::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.moment-time::-webkit-date-and-time-value {
+  text-align: center;
+}
+.moment-time:focus {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 30%, transparent);
+}
+.moment.is-manual .moment-time {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.moment-title {
+  flex: 1;
+  min-width: 0;
+}
+.moment-title strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.moment-title small {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.moment-state {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: #ffffff12;
+  color: var(--text-2);
+}
+.moment-state.en-cours {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  color: var(--gold);
+}
+.moment-state.fait {
+  background: color-mix(in srgb, var(--green) 26%, transparent);
+  color: color-mix(in srgb, var(--green) 55%, #fff);
+}
+.moment-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--gold);
+}
+.moment-missing {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--red) 70%, #fff);
+}
+.moment-missing svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.moment-missing span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.moment-strip {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding-bottom: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.moment-strip > * {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+}
+@media (min-width: 768px) {
+  .moment-strip > * {
+    flex-basis: 164px;
+  }
+}
+.moment-add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  border: 1.5px dashed var(--line);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+}
+.moment-add:hover {
+  border-color: var(--gold-2);
+  background: #ffffff08;
+}
+
+/* Aperçu « Ranger par moment » des anciens préparatifs. */
+.split-groups {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.split-groups section {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ivory-2);
+}
+.split-groups strong {
+  font-size: 14px;
+}
+.split-groups ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* ---------- En-tête d'étape : l'essentiel en un regard ---------- */
+.stage-hero {
+  --stage: var(--gold);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--stage) 22%, transparent), transparent 60%),
+    var(--bg-2);
+  border: 1px solid var(--line-dark);
+}
+.stage-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stage-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: var(--stage);
+  color: #fff;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--stage) 35%, transparent);
+}
+.stage-hero-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.stage-hero-time {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-family: var(--display);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.stage-hero-range {
+  white-space: nowrap;
+}
+.stage-hero-time span {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.stage-hero-place {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 13.5px;
+  min-width: 0;
+}
+.stage-hero-place svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.stage-hero-place span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.stage-hero-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 600px) {
+  .stage-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+.stage-hero-crew {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.crew-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 2px;
+  border-radius: 99px;
+  background: #ffffff0d;
+  border: 1px solid color-mix(in srgb, var(--op, var(--gold)) 55%, transparent);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.crew-chip .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  background: var(--op, var(--gold-2));
+  color: #fff;
+}
+.crew-more {
+  align-self: center;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+.ring-track {
+  stroke: #ffffff14;
+}
+.ring-value {
+  stroke: var(--green);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+.ring strong {
+  margin-top: -6px;
+  font-family: var(--display);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.ring small {
+  position: absolute;
+  bottom: 15px;
+  font-size: 10.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.stage-hero-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13.5px;
+}
+.stage-hero-next button {
+  display: inline;
+  text-align: left;
+  color: var(--text);
+}
+.stage-hero-next b {
+  margin-right: 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.stage-hero-next em {
+  font-style: normal;
+  color: var(--text-2);
+}
+.stage-run {
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--green) 20%, transparent);
+  color: color-mix(in srgb, var(--green) 60%, #fff);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.stage-run.late {
+  background: color-mix(in srgb, var(--red) 20%, transparent);
+  color: color-mix(in srgb, var(--red) 65%, #fff);
+}
+.stage-counters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 2px 16px;
+  scrollbar-width: none;
+}
+.stage-counters::-webkit-scrollbar {
+  display: none;
+}
+.counter {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 7px;
+  flex-shrink: 0;
+  min-width: 92px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-dark);
+  text-align: left;
+  color: var(--text);
+}
+.counter svg {
+  color: var(--gold);
+}
+.counter b {
+  font-family: var(--display);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.counter span {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.counter.on {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-3));
+}
+.counter.alert svg,
+.counter.alert b {
+  color: color-mix(in srgb, var(--red) 70%, #fff);
+}
+.stage-planb,
+.stage-notes {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffff08;
+  font-size: 13.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.stage-notes {
+  margin-top: 12px;
+}
+@media (max-width: 420px) {
+  .stage-hero-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+  .stage-hero-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .stage-hero-time {
+    font-size: 17px;
+  }
+  .ring {
+    width: 66px;
+    height: 66px;
+  }
+  .ring small {
+    bottom: 12px;
+  }
+}
+@media (min-width: 768px) {
+  .stage-hero {
+    padding: 20px 22px;
+  }
+  .stage-hero-icon {
+    width: 60px;
+    height: 60px;
+  }
+  .ring {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+/* ---------- Onglets de l'étape ---------- */
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 6px;
+}
+.board-count {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 6px;
+  min-width: 180px;
+  flex: 1;
+}
+.board-count strong {
+  font-family: var(--display);
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.board-count span {
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+.board-count .progress {
+  grid-column: 1 / -1;
+  max-width: 360px;
+}
+.board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 420px) {
+  .board-actions .btn {
+    padding: 0 14px;
+  }
+}
+.tr-list {
+  display: grid;
+  gap: 10px;
+}
+.tr-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 0.8fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+}
+.tr-end,
+.tr-type {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+  color: var(--text);
+}
+.tr-end .thumb,
+.tr-empty {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+}
+.tr-empty {
+  display: grid;
+  place-items: center;
+  background: var(--bg-3);
+  color: var(--text-2);
+}
+.tr-end small {
+  font-size: 12px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-end.is-missing small {
+  color: var(--orange);
+}
+.tr-type {
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  padding: 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--gold) 45%, transparent);
+}
+.tr-type > svg {
+  color: var(--gold);
+}
+.tr-type strong {
+  font-size: 13px;
+}
+.tr-type small {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.tr-type .thumb.tr-inspi {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+.assign-all {
+  display: grid;
+  gap: 10px;
+}
+.assign-all select {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--ivory-2);
+  color: var(--ink);
+}
+.bulk-count span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bulk-count input {
+  width: 90px;
+  text-align: center;
+}
+
+/* Un repère de planning distinct de l'état de tournage, lisible sans animation. */
+.moment.is-now {
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+}
+.moment-now {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px 0;
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+}
+.moment-now > span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.moment-now small { color: var(--text-2); font-size: 11px; font-weight: 400; }

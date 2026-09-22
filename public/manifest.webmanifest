@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "VISIONNARY — Préparer et vivre le tournage",
+  "short_name": "VISIONNARY",
+  "description": "Préparation, plans et suivi terrain de vos tournages.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#11191b",
+  "theme_color": "#11191b",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

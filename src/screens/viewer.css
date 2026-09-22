@@ -1,0 +1,326 @@
+/* Fiche d'un plan en plein écran : la référence d'abord, l'essentiel ensuite, le statut sous le pouce. */
+.shot-viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #070706;
+  color: var(--text);
+}
+.shot-viewer::backdrop {
+  background: #000;
+}
+.sv {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+.sv-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+}
+.sv-count {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  line-height: 1.2;
+  min-width: 0;
+}
+.sv-count strong {
+  font-variant-numeric: tabular-nums;
+}
+.sv-count small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.sv-main {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sv-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 34dvh;
+  background: #000;
+  touch-action: pan-y;
+}
+.sv-stage .thumb.sv-img {
+  width: 100%;
+  height: 100%;
+  max-height: 58dvh;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: none;
+  animation: none;
+}
+.sv-stage .thumb.sv-img img {
+  max-height: 58dvh;
+  object-fit: contain;
+}
+.sv-video {
+  width: 100%;
+  max-height: 58dvh;
+  background: #000;
+}
+.sv-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--text-2);
+  text-align: center;
+}
+.fp.sv-picto {
+  width: min(560px, 86vw);
+}
+.fp.sv-picto.is-portrait {
+  width: min(260px, 44vw);
+}
+.fp.sv-picto .fp-code {
+  font-size: 13px;
+}
+.sv-nav,
+.sv-full {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #000000a6;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+.sv-nav {
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin-top: -23px;
+}
+.sv-nav.prev {
+  left: 10px;
+}
+.sv-nav.next {
+  right: 10px;
+}
+.sv-full {
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+}
+.sv-strip {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+}
+.sv-strip button {
+  width: 46px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  opacity: 0.7;
+}
+.sv-strip button.on {
+  border-color: var(--gold);
+  opacity: 1;
+}
+.sv-strip .thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0;
+}
+.sv-body {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px 16px 20px;
+}
+.sv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sv-where {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.sv-body h2 {
+  font-size: 26px;
+  line-height: 1.15;
+}
+.sv-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.sv-specs > div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+}
+.sv-specs span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.sv-specs strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 17px;
+}
+.sv-specs em {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: var(--gold);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.sv-op i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.sv-more {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+.sv-more dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.sv-more dd {
+  margin: 2px 0 0;
+  font-size: 14.5px;
+}
+.sv-notes {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sv-transition {
+  color: var(--text-2);
+}
+.sv-transition select {
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: var(--line-dark);
+}
+.sv-status {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1.5fr 0.6fr;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-dark);
+  background: var(--bg);
+}
+.sv-status button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 62px;
+  border-radius: 14px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-dark);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.sv-status button:active {
+  transform: scale(0.97);
+}
+.sv-status button.on {
+  border-color: var(--text-2);
+  background: #ffffff14;
+}
+.sv-status .redo.on {
+  border-color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 22%, var(--bg-3));
+  color: #fff;
+}
+.sv-status .done {
+  background: color-mix(in srgb, var(--gold) 90%, #fff);
+  border: 0;
+  color: var(--gold-ink);
+  font-size: 16px;
+}
+.sv-status .done.on {
+  background: var(--green);
+  color: #fff;
+}
+.sv-status .star {
+  color: var(--gold);
+}
+.sv-status .star.on {
+  background: color-mix(in srgb, var(--gold) 20%, var(--bg-3));
+}
+@media (min-width: 900px) {
+  .sv-main {
+    grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr);
+    grid-template-rows: 100%;
+    overflow: hidden;
+  }
+  .sv-stage {
+    min-height: 0;
+  }
+  .sv-stage .thumb.sv-img,
+  .sv-stage .thumb.sv-img img,
+  .sv-video {
+    max-height: calc(100dvh - 160px);
+  }
+  .sv-body {
+    overflow-y: auto;
+  }
+  .sv-status {
+    grid-template-columns: repeat(3, 180px) 70px;
+    justify-content: center;
+  }
+}
+@media (max-width: 420px) {
+  .sv-status {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+  .sv-status button {
+    font-size: 12px;
+    letter-spacing: 0.01em;
+  }
+  .sv-status .redo svg {
+    display: none;
+  }
+}

@@ -1,0 +1,90 @@
+.stage-line {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.stage-line li button {
+  display: grid;
+  grid-template-columns: 54px 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 6px;
+  border-radius: 12px;
+  text-align: left;
+  position: relative;
+}
+.stage-line li button:hover {
+  background: #ffffff08;
+}
+.stage-line li:not(:last-child) button::after {
+  content: "";
+  position: absolute;
+  left: calc(6px + 54px + 12px + 19px);
+  top: 50px;
+  bottom: -12px;
+  width: 2px;
+  background: var(--line-dark);
+}
+.stage-line time {
+  padding-top: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stage-line time s {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-2);
+}
+.stage-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+}
+.stage-text {
+  padding-top: 3px;
+  min-width: 0;
+}
+.stage-text strong {
+  display: block;
+  font-size: 15px;
+}
+.stage-text small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.stage-text .stage-real {
+  color: var(--green);
+}
+.stage-text .stage-real.late {
+  color: var(--red);
+}
+.stage-line li.state-en-cours button {
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+}
+.stage-line li.state-en-cours .stage-icon {
+  box-shadow: 0 0 0 3px var(--gold);
+}
+.stage-line li.state-terminée {
+  opacity: 0.6;
+}
+.card .stage-line li button:hover {
+  background: #0000000a;
+}
+.card .stage-text small,
+.card .stage-line time s {
+  color: var(--ink-2);
+}
+.card .stage-line li:not(:last-child) button::after {
+  background: var(--line);
+}

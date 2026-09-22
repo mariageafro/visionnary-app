@@ -1,0 +1,195 @@
+/* Pose Board : un mur de références au format naturel, lisible et tactile. */
+.pose-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 4px -16px 14px;
+  padding: 2px 16px 4px;
+  scrollbar-width: none;
+}
+.pose-filters::-webkit-scrollbar {
+  display: none;
+}
+/* Grille régulière (façon Instagram) : chaque vignette a le même format, recadrée au centre —
+   fini les colonnes façon Pinterest où une image courte voisinait une image longue. */
+.pose-wall {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 700px) {
+  .pose-wall {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (min-width: 1150px) {
+  .pose-wall {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.pose-tile {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-3);
+  border: 1px solid var(--line-dark);
+  animation: tile-in 0.35s ease both;
+}
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.pose-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.pose-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+}
+.pose-frame .thumb.pose-thumb {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.pose-frame .thumb.pose-thumb img,
+.pose-frame .thumb.pose-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pose-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--text-2);
+}
+.pose-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, #000000c7 100%);
+  pointer-events: none;
+}
+.pose-info {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 9px;
+  display: grid;
+  gap: 2px;
+  color: #fff;
+  pointer-events: none;
+}
+.pose-info strong {
+  font-size: 13.5px;
+  line-height: 1.25;
+  text-shadow: 0 1px 4px #000a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pose-info small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #e7e0d1;
+  text-shadow: 0 1px 3px #000a;
+}
+.pose-info small i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+.pose-check,
+.pose-fav {
+  position: absolute;
+  top: 8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #000000a6;
+  border: 1.5px solid #ffffff5c;
+  color: #ffffffb3;
+  backdrop-filter: blur(3px);
+}
+.pose-check {
+  left: 8px;
+}
+.pose-fav {
+  right: 8px;
+}
+.pose-check[aria-pressed="true"] {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.pose-fav[aria-pressed="true"] {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.pose-tile.is-done .pose-thumb img {
+  opacity: 0.5;
+  filter: saturate(0.4);
+}
+.pose-tile.is-fav {
+  border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+}
+.pose-duration {
+  position: absolute;
+  top: 50px;
+  left: 8px;
+}
+.pose-move {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 10px;
+}
+.pose-move button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--gold-ink);
+  box-shadow: var(--shadow);
+}
+.pose-wall.is-reordering .pose-tile {
+  outline: 2px dashed color-mix(in srgb, var(--gold) 60%, transparent);
+  outline-offset: -3px;
+}
+.pose-say {
+  font-size: 19px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--gold);
+}
+.op-pills.pose-assign {
+  flex-wrap: wrap;
+  margin: 6px 0 0;
+  padding: 0;
+  overflow: visible;
+}
+.sv-status.pose-status {
+  grid-template-columns: 0.6fr 1fr 1.6fr;
+}
+@media (min-width: 900px) {
+  .sv-status.pose-status {
+    grid-template-columns: 70px 180px 220px;
+  }
+}

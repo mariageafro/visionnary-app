@@ -1,0 +1,1257 @@
+/* Scene Designer : plein écran, sombre, pensé pour la tablette et l'ordinateur, utilisable au téléphone. */
+.app.is-scene .bottom-nav {
+  display: none;
+}
+.app.is-scene .main {
+  padding-bottom: 0;
+}
+/* L'éditeur a son propre bouton retour : toute la largeur va au plan. */
+.app.is-scene .side {
+  display: none;
+}
+@media (min-width: 960px) {
+  .app.is-scene .main {
+    margin-left: 0;
+  }
+}
+.sd-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+}
+.sd-screen > * {
+  flex: none;
+}
+.sd-screen > .sd-body {
+  flex: 1 1 auto;
+}
+.sd-top {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: calc(env(safe-area-inset-top) + 6px) 10px 6px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-dark);
+}
+.sd-name {
+  flex: 1 1 140px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+}
+.sd-name:not(:focus) {
+  text-overflow: ellipsis;
+}
+.sd-name:focus {
+  outline: none;
+  border-color: var(--line-dark);
+  background: var(--bg-3);
+}
+.sd-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sd-toolbar::-webkit-scrollbar {
+  display: none;
+}
+.sd-toolbar .icon-btn {
+  flex-shrink: 0;
+  min-width: 38px;
+  height: 38px;
+}
+.icon-btn.on {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  color: var(--gold);
+}
+.sd-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--line-dark);
+}
+/* Menu « Fond, export » : posé par-dessus le plan, sans le rétrécir. */
+.sd-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #0000004d;
+  cursor: default;
+}
+.sd-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  width: min(420px, calc(100vw - 16px));
+  max-height: min(70dvh, 560px);
+  padding: 14px;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  box-shadow: var(--shadow);
+}
+.sd-menu-group {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.sd-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 330px;
+  min-height: 0;
+}
+.sd-left {
+  overflow-y: auto;
+  background: var(--bg-2);
+  border-right: 1px solid var(--line-dark);
+}
+.sd-center {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.sd-right {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line-dark);
+}
+.sd-tabbar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line-dark);
+}
+.sd-tabs {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+}
+.sd-sheet-toggle {
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.sd-tabs button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 38px;
+  border-radius: 9px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.sd-tabs button.on {
+  background: var(--bg-3);
+  color: var(--text);
+}
+.sd-panel {
+  display: none;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.panel-library .sd-panel-library,
+.panel-inspector .sd-panel-inspector,
+.panel-layers .sd-panel-layers,
+.panel-timeline .sd-panel-timeline {
+  display: block;
+}
+.sd-bottom {
+  max-height: 30vh;
+  overflow-y: auto;
+  background: var(--bg-2);
+  border-top: 1px solid var(--line-dark);
+}
+/* Ordinateur : bibliothèque à gauche, timeline en bas — leurs onglets sont inutiles. */
+@media (min-width: 1024px) {
+  .sd-tabs button:nth-child(1),
+  .sd-tabs button:nth-child(4) {
+    display: none;
+  }
+  .panel-library .sd-panel-library,
+  .panel-timeline .sd-panel-timeline {
+    display: none;
+  }
+  .panel-library .sd-panel-inspector,
+  .panel-timeline .sd-panel-inspector {
+    display: block;
+  }
+  .sd-fab {
+    display: none !important;
+  }
+}
+/* Tablette : plan + panneau à droite, timeline en bas. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sd-body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .sd-left {
+    display: none;
+  }
+  .sd-tabs button:nth-child(4) {
+    display: none;
+  }
+  .panel-timeline .sd-panel-inspector {
+    display: block;
+  }
+}
+/* Téléphone portrait : le plan en haut, les panneaux à onglets en bas (pas de fenêtre modale). */
+@media (max-width: 767px) {
+  .sd-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) min(46dvh, 420px);
+  }
+  .sd-left,
+  .sd-bottom {
+    display: none;
+  }
+  .sd-right {
+    border-left: 0;
+    border-top: 1px solid var(--line-dark);
+  }
+  .sd-tabs button {
+    font-size: 11.5px;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 44px;
+  }
+}
+/* Téléphone portrait, panneau replié : le plan prend tout l'écran, seuls les onglets restent. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .sd-screen.sheet-closed .sd-body {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .sd-screen.sheet-closed .sd-panel {
+    display: none !important;
+  }
+  .sd-screen.sheet-closed .sd-tabbar {
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+/* Téléphone paysage : plan large, panneau latéral étroit. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sd-body {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    grid-template-rows: none;
+  }
+  .sd-left,
+  .sd-bottom {
+    display: none;
+  }
+  .sd-tabs button:nth-child(4) {
+    display: inline-flex;
+  }
+  .panel-timeline .sd-panel-timeline {
+    display: block;
+  }
+  .sd-right {
+    border-top: 0;
+    border-left: 1px solid var(--line-dark);
+  }
+}
+
+/* ---------- Toile ---------- */
+.sd-canvas-box {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: #0d0e0e;
+}
+.sd-canvas-box.tool-path {
+  cursor: crosshair;
+}
+.sd-canvas-box.tool-background {
+  cursor: move;
+}
+.sd-svg {
+  display: block;
+}
+.sd-label {
+  pointer-events: none;
+  font-family: var(--font);
+}
+.sd-node {
+  cursor: pointer;
+}
+.sd-handle {
+  cursor: grab;
+}
+.sd-handle.rotate {
+  cursor: alias;
+}
+.sd-handle.resize {
+  cursor: nwse-resize;
+}
+.sd-scale {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  pointer-events: none;
+}
+.sd-scale span {
+  height: 5px;
+  border: 1.5px solid var(--text-2);
+  border-top: 0;
+}
+.sd-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: #000000cc;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+.sd-fab {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--gold-ink);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Téléphone : outils posés sur le plan ---------- */
+.sd-rail {
+  position: absolute;
+  top: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: #0b0b0ae6;
+  border: 1px solid var(--line-dark);
+  box-shadow: var(--shadow);
+}
+.sd-rail .icon-btn {
+  width: 42px;
+  height: 42px;
+}
+.sd-rail .icon-btn:disabled {
+  display: none;
+}
+.sd-rail-tools {
+  left: 10px;
+}
+.sd-rail-view {
+  right: 10px;
+}
+.sd-selchip {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 132px);
+  min-height: 40px;
+  padding: 0 6px 0 12px;
+  border-radius: 99px;
+  background: #0b0b0ae6;
+  border: 1px solid var(--gold-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  box-shadow: var(--shadow);
+}
+.sd-selchip svg {
+  flex-shrink: 0;
+  color: var(--gold);
+}
+.sd-selchip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-selchip b {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-size: 12px;
+}
+.sd-mini {
+  position: absolute;
+  left: 10px;
+  bottom: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 90px);
+  padding: 4px 12px 4px 4px;
+  border-radius: 99px;
+  background: #0b0b0ae6;
+  border: 1px solid var(--line-dark);
+  box-shadow: var(--shadow);
+}
+.sd-mini .sd-play {
+  width: 40px;
+  height: 40px;
+}
+.sd-mini-time {
+  display: grid;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.sd-mini-time em {
+  overflow: hidden;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--gold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  /* L'échelle remonte au-dessus de la mini-lecture. */
+  .sd-scale {
+    bottom: 64px;
+  }
+  /* Consignes entre les deux barres d'outils. */
+  .sd-banner {
+    max-width: calc(100% - 128px);
+    border-radius: 14px;
+    font-size: 12px;
+  }
+}
+
+/* ---------- Bibliothèque ---------- */
+.sd-library {
+  display: grid;
+  gap: 12px;
+  padding: 10px 10px 24px;
+}
+.sd-library h3 {
+  margin: 4px 2px 6px;
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.sd-search {
+  margin: 0;
+}
+.sd-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (max-width: 767px) {
+  .sd-lib-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sd-lib-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-dark);
+  color: var(--text);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: grab;
+}
+.sd-lib-item:hover {
+  border-color: var(--gold-2);
+}
+.sd-lib-item i {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #1b1a17;
+}
+.sd-lib-item span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+/* ---------- Inspecteur ---------- */
+.sd-inspector {
+  display: grid;
+  gap: 2px;
+  padding: 12px 12px 32px;
+}
+.sd-inspector-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 26px 18px;
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+.sd-inspector-empty svg {
+  color: var(--gold);
+}
+.sd-head {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-dark);
+}
+.sd-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sd-card-btn {
+  justify-content: center;
+  margin: 10px 0 2px;
+}
+.sd-section {
+  display: grid;
+  gap: 8px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line-dark);
+}
+.sd-section h4 {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.sd-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.sd-field input,
+.sd-field select,
+.sd-field textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line-dark);
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.sd-field textarea {
+  resize: vertical;
+}
+.sd-range span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sd-range b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.sd-range input {
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--gold);
+}
+.sd-num {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sd-num em {
+  font-style: normal;
+  color: var(--text-2);
+}
+.sd-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.sd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sd-chips .chip {
+  min-height: 30px;
+  cursor: pointer;
+}
+.sd-estimate {
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-3));
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sd-estimate b {
+  color: var(--gold);
+  font-size: 15px;
+}
+.sd-estimate em {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--gold) 25%, transparent);
+  color: var(--gold);
+  font-style: normal;
+  font-weight: 800;
+}
+.sd-hint {
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.sd-hint.gold {
+  color: var(--gold);
+}
+.op-pills.sd-pills {
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.sd-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sd-role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 11px 4px 8px;
+  border-radius: 99px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-dark);
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+}
+.sd-role i {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #0006;
+}
+.sd-role.on {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 14%, var(--bg-3));
+}
+.sd-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.sd-ref {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.sd-ref .thumb {
+  width: 110px;
+}
+.sd-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.sd-shots {
+  display: grid;
+  gap: 4px;
+  max-height: 220px;
+  margin-top: 6px;
+  overflow-y: auto;
+}
+.sd-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.sd-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Calques ---------- */
+.sd-layers {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 32px;
+}
+.sd-layers header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sd-layers header strong {
+  flex: 1;
+  font-size: 13px;
+}
+.sd-layers header small {
+  color: var(--text-2);
+  margin-right: 4px;
+}
+.sd-layer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+}
+.sd-layer-item.on {
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  color: var(--text);
+}
+.sd-layer-item.is-hidden {
+  opacity: 0.5;
+}
+.sd-layer-item em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+/* ---------- Timeline ---------- */
+.sd-timeline {
+  display: grid;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+.sd-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sd-play {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.sd-transport select {
+  min-height: 34px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line-dark);
+  background: var(--bg-3);
+  color: var(--text);
+}
+.sd-time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sd-time small {
+  font-weight: 500;
+  color: var(--text-2);
+}
+.sd-cue-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 40ch;
+  padding: 3px 4px 3px 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.sd-cue-now em {
+  overflow: hidden;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-cue-now button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--gold);
+}
+.sd-cue-now button:hover {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+}
+.sd-cue-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sd-cue-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line-dark);
+  background: var(--bg-3);
+  color: var(--text);
+}
+.sd-tracks {
+  display: grid;
+  gap: 4px;
+}
+.sd-track {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.sd-track-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--text-2);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sd-track-label i {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.sd-track.on .sd-track-label {
+  color: var(--text);
+  font-weight: 700;
+}
+.sd-ruler,
+.sd-lane {
+  position: relative;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-3);
+}
+.sd-ruler {
+  height: 36px;
+  cursor: pointer;
+  touch-action: none;
+}
+.sd-tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-2);
+  pointer-events: none;
+}
+.sd-tick:first-child {
+  transform: none;
+  margin-left: 3px;
+}
+.sd-cue {
+  position: absolute;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 11px;
+  overflow: hidden;
+  font-size: 10.5px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.sd-cue em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: normal;
+}
+.sd-cue button {
+  display: none;
+  color: var(--text-2);
+}
+.sd-cue:hover button {
+  display: inline-grid;
+}
+.sd-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--red);
+  pointer-events: none;
+}
+.sd-clip {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  min-width: 8px;
+  padding: 0 12px 0 6px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--clip);
+  background: color-mix(in srgb, var(--clip) 38%, var(--bg-3));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+}
+.sd-clip-end {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  background: color-mix(in srgb, var(--clip) 70%, transparent);
+  cursor: ew-resize;
+}
+/* Au doigt : poignée de durée plus large. */
+@media (pointer: coarse) {
+  .sd-clip {
+    padding-right: 26px;
+  }
+  .sd-clip-end {
+    width: 22px;
+  }
+}
+.sd-empty-tracks {
+  padding: 4px 0;
+  font-size: 12.5px;
+}
+@media (max-width: 767px) {
+  .sd-track {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+}
+
+/* ---------- Aperçu dans l'étape ---------- */
+.sd-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.sd-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.sd-preview-head strong {
+  font-family: var(--display);
+  font-size: 16px;
+}
+.sd-preview-head small {
+  color: var(--text-2);
+}
+.sd-preview-head .btn-row {
+  margin-left: auto;
+}
+.sd-preview-head select,
+.sd-plan-card select {
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-dark);
+  background: var(--bg-2);
+  color: var(--text);
+}
+.sd-preview-canvas {
+  position: relative;
+  height: min(62vh, 560px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line-dark);
+}
+/* Aperçu dans une page qui défile : un glisser vertical fait défiler la page, pas le plan. */
+.sd-preview-canvas .sd-canvas-box {
+  touch-action: pan-y;
+}
+.sd-preview-fit {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #000000a6;
+  color: #fff;
+}
+.sd-preview-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: #000000cc;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+  pointer-events: none;
+}
+.sd-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sd-preview-controls input[type="range"] {
+  flex: 1;
+  accent-color: var(--gold);
+}
+.sd-cam-chips {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+.sd-cam-chip {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  flex-shrink: 0;
+  padding: 9px 14px 9px 12px;
+  border-radius: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  color: var(--text);
+  text-align: left;
+}
+.sd-cam-chip svg {
+  grid-row: span 2;
+  color: var(--gold);
+}
+.sd-cam-chip span {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.sd-cam-chip i {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ---------- Liste des plans, presets, médias ---------- */
+.sd-plans {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 900px) {
+  .sd-plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.sd-plan-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+}
+.sd-plan-card select {
+  flex: 1;
+}
+.sd-plan-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  text-align: left;
+}
+.sd-plan-open svg {
+  flex-shrink: 0;
+  color: var(--gold);
+}
+.sd-plan-open strong {
+  display: block;
+  font-size: 16px;
+}
+.sd-plan-open small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.sd-templates {
+  display: grid;
+  gap: 8px;
+}
+.sd-template {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  text-align: left;
+}
+.sd-template:hover {
+  border-color: var(--gold-2);
+}
+.sd-template small {
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+.sd-template.blank {
+  border-style: dashed;
+}
+.sd-template-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gold-2);
+}
+.sd-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+.sd-pick {
+  display: grid;
+  gap: 4px;
+  color: var(--ink);
+  text-align: left;
+}
+.sd-pick .thumb {
+  width: 100%;
+}
+.sd-pick small {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cam-op i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.cam-shots {
+  display: grid;
+  gap: 6px;
+}
+.cam-shot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.cam-shot .thumb,
+.cam-shot .tr-empty {
+  width: 64px;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+}
+
+.sd-canvas-box.tool-pan { cursor: grab; }
+.sd-canvas-box.tool-pan:active { cursor: grabbing; }
+
+.clean-cones .sd-cone { display:none; }
+.clean-labels .sd-label { display:none; }
+.clean-labels .sd-cam .sd-label { display:block; }
+.sd-display{position:relative;z-index:12;font-size:12px;color:var(--text-2)}
+.sd-center>.sd-display{position:absolute;top:12px;left:50%;transform:translateX(-50%)}
+.sd-display summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;border:1px solid var(--line);background:var(--bg-2);border-radius:10px;padding:10px;min-height:44px}
+.sd-display>div{position:absolute;top:48px;left:50%;transform:translateX(-50%);width:205px;display:grid;gap:4px;padding:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px}
+.sd-display label{min-height:44px;display:flex;gap:8px;align-items:center}.sd-preview>.sd-display{width:max-content;margin-bottom:8px}.sd-preview>.sd-display>div{left:0;transform:none}
+
+.clean-labels .sd-subject .sd-label,.clean-labels .is-selected .sd-label{display:block}

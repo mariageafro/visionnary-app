@@ -1,0 +1,423 @@
+/* Mode Jour J : gros caractères, actions sous le pouce, rien de superflu. */
+.app.is-field .bottom-nav {
+  display: none;
+}
+.field-mode {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 14px calc(130px + env(safe-area-inset-bottom));
+}
+.field-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -14px 10px;
+  padding: calc(env(safe-area-inset-top) + 6px) 8px 6px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.field-clock {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.field-clock strong {
+  font-family: var(--display);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.field-clock .delay {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+}
+.field-clock .delay.late {
+  color: var(--red);
+}
+.field-mode .op-pills {
+  margin: 0 -14px 10px;
+  padding: 2px 14px 4px;
+}
+.field-stage {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  text-align: left;
+}
+.field-stage-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+.field-stage strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-stage-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.field-shot {
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--ivory);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.field-ref {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  cursor: zoom-in;
+}
+.field-ref .thumb.field-ref-img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: #000;
+}
+.field-ref .thumb.field-ref-img img {
+  object-fit: contain;
+}
+.field-ref .thumb .play {
+  width: 44px;
+  height: 44px;
+  inset: auto 12px 12px auto;
+}
+.field-ref-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 16px;
+  color: #8f8878;
+  text-align: center;
+  font-size: 13px;
+  cursor: default;
+}
+.field-must {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+.field-clip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.field-shot-body {
+  padding: 12px 16px 16px;
+}
+.field-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.field-shot h2 {
+  margin: 0 0 10px;
+  font-size: 26px;
+  line-height: 1.15;
+}
+.field-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.field-specs div {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ivory-2);
+}
+.field-specs span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.field-specs strong {
+  font-size: 17px;
+}
+.field-notes,
+.field-planb {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.field-planb {
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 25%, var(--ivory));
+}
+.field-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.field-mini .btn {
+  font-variant-numeric: tabular-nums;
+}
+.field-takes {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.field-take {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.field-take .chip {
+  min-height: 34px;
+}
+.field-progress {
+  display: grid;
+  gap: 8px;
+  margin: 2px 2px 4px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.field-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.field-progress-row > span:first-child {
+  font-variant-numeric: tabular-nums;
+}
+/* Essentiels manquants : visible de loin, un tap pour ne plus voir qu'eux. */
+.field-must-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--red) 60%, transparent);
+  background: color-mix(in srgb, var(--red) 16%, var(--bg-2));
+  color: color-mix(in srgb, var(--red) 65%, #fff);
+  font-size: 14px;
+  font-weight: 750;
+}
+.field-must-btn.on {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.field-must-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--green) 60%, #fff);
+}
+/* « MAINTENANT → ENSUITE → PUIS » : on lit la suite sans réfléchir. */
+.field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin: 12px 2px 7px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.field-label b {
+  flex-shrink: 0;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-2);
+}
+.field-label.now b {
+  color: var(--gold);
+}
+.field-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-op {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.field-op i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.field-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.field-more b {
+  margin-right: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.field-next {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px 10px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line-dark);
+  text-align: left;
+  color: var(--text);
+}
+.field-next:hover {
+  border-color: var(--gold-2);
+}
+.field-next .thumb.field-next-thumb,
+.field-next-thumb.empty {
+  width: 104px;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+}
+.field-next-thumb.empty {
+  display: grid;
+  place-items: center;
+  background: var(--bg-3);
+  color: var(--text-2);
+}
+.field-next-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.field-next-body strong {
+  font-size: 16px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.field-next-body small {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.field-last {
+  margin: 0 2px;
+  color: var(--text-2);
+}
+.field-actions {
+  position: fixed;
+  z-index: 25;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-top: 1px solid var(--line-dark);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.field-actions button {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  min-height: 82px;
+  border-radius: 16px;
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--line-dark);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.field-actions button:active {
+  transform: scale(0.97);
+}
+.field-actions .fa-done {
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: 0;
+  font-size: 17px;
+}
+:root[data-mode="terrain"] .field-actions button {
+  min-height: 92px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+:root[data-mode="terrain"] .field-actions .fa-done {
+  font-size: 18px;
+}
+@media (min-width: 960px) {
+  .field-actions {
+    left: 260px;
+  }
+  .field-actions > * {
+    max-width: none;
+  }
+}
+.field-list .row {
+  min-height: 64px;
+}
+.field-list .row-main strong {
+  white-space: normal;
+  font-size: 16px;
+}
+.field-done {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 30px 18px;
+  text-align: center;
+}
+.field-done > svg {
+  color: var(--green);
+}
+.field-pose .thumb.field-pose-img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  max-height: 46dvh;
+  margin-bottom: 12px;
+}
+.field-pose h2 {
+  font-size: 24px;
+  margin: 4px 0 10px;
+}
+.field-say {
+  font-size: 19px;
+  line-height: 1.4;
+  font-style: italic;
+  margin-bottom: 8px;
+}

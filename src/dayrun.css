@@ -1,0 +1,219 @@
+.dayrun {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.dayrun-top {
+  display: grid;
+  gap: 14px;
+}
+.dayrun-live h2 {
+  margin-bottom: 4px;
+}
+.dayrun-live.is-running {
+  border-color: var(--gold);
+}
+.delay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+.delay-chip.late {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+.delay-chip.early {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  color: var(--gold-2);
+}
+.dayrun-clock {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 14px 0 18px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--ivory-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.dayrun-clock span {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.dayrun-clock strong {
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.dayrun-clock.soon {
+  border-color: var(--gold);
+}
+.dayrun-clock.over {
+  border-color: var(--red);
+}
+.dayrun-clock.over div:nth-child(2) strong {
+  color: var(--red);
+}
+.t-badge {
+  margin-left: auto;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: #1b2224;
+  font-size: 20px;
+}
+.dayrun-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.dayrun-live .notice {
+  margin: 12px 0 0;
+}
+.sun-card.is-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.sun-card.is-empty p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.sun-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+.sun-grid > div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ivory-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.sun-grid > div.is-gold {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, var(--ivory));
+}
+.sun-grid svg {
+  float: right;
+  color: var(--gold-2);
+}
+.sun-grid span {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.sun-grid strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.dayrun-table h3 {
+  margin: 0;
+}
+.dayrun-group {
+  margin: 16px 0 6px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold-2);
+}
+.dayrun-rows {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.dayrun-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto auto 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--ivory);
+  color: var(--ink);
+}
+.dayrun-row.state-en-cours {
+  border-color: var(--gold);
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+.dayrun-row.state-terminée {
+  opacity: 0.7;
+}
+.dayrun-row time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dayrun-row time s {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.dayrun-row-main {
+  min-width: 0;
+}
+.dayrun-row-main strong,
+.dayrun-row-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dayrun-row-main small {
+  color: var(--ink-2);
+}
+.dayrun-real {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.dayrun-real em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--green);
+}
+.dayrun-real em.late {
+  color: var(--red);
+}
+.dayrun-real em.early {
+  color: var(--gold-2);
+}
+@media (max-width: 960px) {
+  .dayrun-top {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .dayrun-row {
+    grid-template-columns: 52px minmax(0, 1fr) 44px;
+  }
+  .dayrun-row .status,
+  .dayrun-row .dayrun-real {
+    display: none;
+  }
+  .dayrun-clock {
+    gap: 16px;
+  }
+  .dayrun-clock strong {
+    font-size: 28px;
+  }
+  .sun-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

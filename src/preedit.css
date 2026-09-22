@@ -1,0 +1,334 @@
+.preedit {
+  color: var(--ink);
+  background: var(--ivory);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.preedit-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.preedit h2 {
+  font-size: clamp(25px, 3vw, 38px);
+  letter-spacing: -1px;
+  margin: 10px 0;
+}
+.preedit p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.preedit-eyebrow,
+.preedit-label {
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.preedit button {
+  font: inherit;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.preedit button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.preedit button:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+.preedit button:focus-visible,
+.preedit input:focus-visible,
+.preedit textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.preedit-exports {
+  display: flex;
+  gap: 8px;
+}
+.preedit-workspace {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 20px;
+}
+.preedit-library {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 20px;
+  max-height: 650px;
+  overflow: auto;
+}
+.preedit-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.preedit-label > span {
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+.preedit-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.preedit-source input {
+  accent-color: var(--gold);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.preedit-source > span {
+  flex: 1;
+  min-width: 0;
+}
+.preedit-source strong {
+  font-size: 12px;
+  display: block;
+  line-height: 1.5;
+}
+.preedit-source small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+  margin-top: 5px;
+}
+.preedit-source button {
+  padding: 6px 9px;
+}
+.preedit-monitor {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 70% 25%, #37463b 0%, #17221f 45%, #101716 100%);
+  color: #f5ecd9;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 25px;
+  overflow: hidden;
+}
+.preedit-monitor-badge {
+  align-self: flex-start;
+  padding: 7px 10px;
+  border: 1px solid #667668;
+  border-radius: 5px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #dfc599;
+}
+.preedit-current {
+  text-align: center;
+  max-width: 600px;
+  margin: 25px auto;
+}
+.preedit-current > span {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #cfb782;
+}
+.preedit-current h3 {
+  font-size: clamp(23px, 3vw, 35px);
+  font-weight: 500;
+  letter-spacing: -0.8px;
+  margin: 15px 0;
+}
+.preedit-current p {
+  color: #bac5be;
+}
+.preedit-current blockquote {
+  font-style: italic;
+  font-size: 14px;
+  color: #efc783;
+}
+.preedit-current small {
+  color: #cfb782;
+  font-size: 11px;
+}
+.preedit-monitor-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  color: #abb9ad;
+}
+.preedit-transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+}
+.preedit .preedit-primary {
+  background: var(--gold);
+  color: #17221f;
+  font-weight: 700;
+}
+.preedit-transport input {
+  min-width: 25px;
+  flex: 1;
+  accent-color: var(--gold);
+}
+.preedit-transport > span {
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.preedit-timeline {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 20px;
+}
+.preedit-tracks {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 20px 0 8px;
+}
+.preedit-clip {
+  flex: 0 0 180px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+  border-radius: 9px;
+  background: var(--paper);
+  overflow: hidden;
+  cursor: grab;
+  transition: border-color 0.15s;
+}
+.preedit-clip.is-current {
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+.preedit-clip.is-selected {
+  border-color: var(--gold);
+}
+.preedit .preedit-clip-title {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  width: 100%;
+  min-height: 100px;
+  white-space: normal;
+  line-height: 1.5;
+}
+.preedit-clip-title small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.preedit-clip-title strong {
+  font-size: 12px;
+}
+.preedit-clip-title strong span {
+  color: var(--gold);
+}
+.preedit-clip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 8px;
+}
+.preedit-clip-actions button {
+  padding: 4px 9px;
+  font-size: 13px;
+}
+.preedit-empty {
+  padding: 30px 5px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.preedit-hint {
+  font-size: 11px !important;
+}
+.preedit-details {
+  margin-top: 20px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+}
+.preedit-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 16px;
+}
+.preedit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.preedit-form input,
+.preedit-form textarea {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .preedit-workspace {
+    grid-template-columns: 1fr;
+  }
+  .preedit-library {
+    max-height: 300px;
+  }
+  .preedit-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .preedit-transport {
+    flex-wrap: wrap;
+  }
+  .preedit-transport input {
+    min-width: 100px;
+  }
+  .preedit-monitor-footer {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 500px) {
+  .preedit-form {
+    grid-template-columns: 1fr;
+  }
+  .preedit-monitor {
+    padding: 18px;
+  }
+  .preedit-label {
+    flex-wrap: wrap;
+  }
+  .preedit-transport > span {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preedit-clip {
+    transition: none;
+  }
+}
