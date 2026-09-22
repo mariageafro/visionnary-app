@@ -1,15 +1,52 @@
 import DemoButton from "./DemoButton";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, Plus } from "lucide-react";
 import { useStore } from "../store";
 import ShootWizard from "./ShootWizard";
+import { buildWeddingDemo } from "../weddingDemo";
+import { mediaChanged, navigate } from "../ui";
 import "./welcome.css";
 
-/** Écran d'accueil : premier lancement ou aucun tournage actif. */
+/**
+ * Écran d'accueil : premier lancement ou aucun tournage actif. Sur le site public déployé
+ * (accès direct demandé), la démo se charge toute seule plutôt que d'attendre un clic — en local
+ * (npm run dev), on garde le choix manuel pour ne pas gêner un vrai premier tournage.
+ */
 export default function Welcome() {
-  const { w, change } = useStore();
+  const store = useStore();
+  const { w, change } = store;
+  const latest = useRef(store);
+  latest.current = store;
   const [wizard, setWizard] = useState(false);
   const [name, setName] = useState(w.ownerName ?? "");
+  const [auto, setAuto] = useState(import.meta.env.PROD && w.projects.length === 0);
+  const started = useRef(false);
+  useEffect(() => {
+    if (!auto || started.current) return;
+    started.current = true;
+    void (async () => {
+      try {
+        const p = await buildWeddingDemo();
+        const s = latest.current;
+        s.change({ ...s.w, projects: [...s.w.projects, p], activeProjectId: p.id }, "Démo ouverte · entièrement modifiable");
+        mediaChanged();
+        navigate("/accueil");
+      } catch {
+        setAuto(false);
+      }
+    })();
+  }, [auto]);
+  if (auto)
+    return (
+      <div className="welcome">
+        <img className="welcome-bg" src="director.jpg" alt="" />
+        <div className="welcome-shade" />
+        <div className="welcome-body">
+          <img className="welcome-logo" src="logo-visionary-wedding.jpg" alt="Visionary Wedding" />
+          <p className="welcome-tag">Ouverture de la démo…</p>
+        </div>
+      </div>
+    );
   return (
     <div className="welcome">
       <img className="welcome-bg" src="director.jpg" alt="" />
