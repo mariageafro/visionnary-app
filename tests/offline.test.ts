@@ -8,8 +8,8 @@ function harness(failingPath = '') {
   const fetched:string[] = [];
   const cache = { put:async(key:string,response:Response)=>entries.set(key,response.clone()), match:async(key:string)=>entries.get(key)?.clone() };
   const caches = {open:async()=>cache, match:cache.match, keys:async()=>[], delete:async()=>true};
-  runInNewContext(readFileSync(new URL('../public/sw.js',import.meta.url),'utf8').replace('const BUILD_ASSETS = [];', 'const BUILD_ASSETS = ["/assets/chunk.js", "/assets/font.woff2"];'), {
-    self:{location:{origin:'https://studio.test'},addEventListener:(key:string,fn:any)=>events[key]=fn,clients:{claim:async()=>{}}},
+  runInNewContext(readFileSync(new URL('../public/sw.js',import.meta.url),'utf8').replace('const BUILD_ASSETS = [];', 'const BUILD_ASSETS = ["assets/chunk.js", "assets/font.woff2"];'), {
+    self:{location:{origin:'https://studio.test'},registration:{scope:'https://studio.test/'},addEventListener:(key:string,fn:any)=>events[key]=fn,clients:{claim:async()=>{}}},
     caches, URL, Response,
     Request:class {url:string;constructor(input:any,public options?:any){this.url=typeof input==='string'?input:input.url;}},
     fetch:async(req:any)=>{fetched.push(req.url);if(req.url===failingPath)throw Error('network failed');return new Response(req.url==='/index.html'?'<html><body>studio</body></html>':'asset');},
