@@ -282,6 +282,8 @@ export function createServer({
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const host = process.env.HOST || "127.0.0.1";
+  // Les hébergeurs cloud (Render, Fly, Railway…) imposent leur propre port via $PORT.
+  const port = Number(process.env.PORT) || 4311;
   const configuredOrigins = process.env.ALLOWED_ORIGINS?.split(",")
     .map((s) => s.trim())
     .filter(Boolean);
@@ -306,7 +308,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       throw new Error("Créez le compte en local avant de démarrer sur le réseau.");
     }
   }
-  createServer(configuredOrigins ? { allowedOrigins: configuredOrigins } : {}).listen(4311, host, () =>
-    console.log(`VISIONNARY : http://${host}:4311 (${local ? "local" : "réseau explicite"})`),
+  createServer(configuredOrigins ? { allowedOrigins: configuredOrigins } : {}).listen(port, host, () =>
+    console.log(`VISIONNARY : http://${host}:${port} (${local ? "local" : "réseau explicite"})`),
   );
 }

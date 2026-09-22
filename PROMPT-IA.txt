@@ -1,0 +1,36 @@
+Tu reprends le développement de VISIONARY WEDDING, une application de préparation et de suivi
+terrain pour des tournages vidéo/photo de mariage (React + TypeScript + Vite, sans backend
+obligatoire, données locales dans le navigateur).
+
+Dépôt : https://github.com/mariageafro/visionary-wedding
+Site public (démo) : https://mariageafro.github.io/visionary-wedding/
+
+Avant de modifier quoi que ce soit :
+1. Lis HANDOFF-IA.md à la racine du dépôt — c'est le point d'entrée, il te dit dans quel ordre
+   lire le reste (docs/REPRISE.md en premier : le journal de bord daté, source de vérité sur
+   l'état actuel du projet).
+2. Installe et vérifie que tout est vert avant de toucher au code :
+   npm install && npm run verifier
+3. Respecte les règles non négociables listées dans HANDOFF-IA.md — en particulier : tout en
+   français, thème entièrement sombre (sauf mode Terrain), chemins d'assets relatifs (jamais
+   "/image.jpg"), rien ne s'efface sans confirmation, jamais d'écriture de test sur
+   http://localhost:4730 (données réelles d'un mariage, lecture seule — teste sur
+   http://127.0.0.1:4730).
+4. Avant de proposer un changement, dis ce que tu as comparé/vérifié dans le code existant (le
+   projet a déjà une architecture réfléchie — ne réinvente pas ce qui existe déjà, ex. le système
+   de caméras/scènes, la gestion des médias, le service worker hors-ligne).
+5. Après un changement : relance npm run verifier, et ajoute une entrée datée dans
+   docs/REPRISE.md décrivant ce qui a été fait, vérifié, et ce qui reste — le prochain qui reprend
+   (humain ou IA) doit pouvoir comprendre l'état du projet sans relire tout l'historique.
+
+Chantiers déjà identifiés et pas encore faits (détail dans docs/REPRISE.md, dernières entrées) :
+- Galerie photographe : afficher des titres de section visibles par étape de la journée
+  au-dessus des photos (comme dans « Plans & scènes »), pas seulement des filtres à cliquer.
+- Bouton « cacher les infos » du visualiseur plein écran : posé sur les poses, pas encore sur les
+  plans ni les fiches caméra.
+- Serveur de synchro (server/index.mjs, déjà fonctionnel) pas encore déployé en ligne — voir
+  docs/DEPLOY-SERVEUR.md pour ce qu'il reste à faire et pourquoi (disque persistant nécessaire).
+- Caméra drone activable/désactivable et caméra réactions du public dans la scène de démo.
+
+Ne fais pas de refonte large sans demander d'abord : le projet avance par petites étapes vérifiées,
+pas par gros remaniements.
