@@ -1,9 +1,9 @@
-Tu reprends le développement de VISIONARY WEDDING, une application de préparation et de suivi
+Tu reprends le développement de VISIONNARY, une application de préparation et de suivi
 terrain pour des tournages vidéo/photo de mariage (React + TypeScript + Vite, sans backend
 obligatoire, données locales dans le navigateur).
 
-Dépôt : https://github.com/mariageafro/visionary-wedding
-Site public (démo) : https://mariageafro.github.io/visionary-wedding/
+Dépôt : https://github.com/mariageafro/visionnary-app
+Site public (démo) : https://mariageafro.github.io/visionnary-app/
 
 Avant de modifier quoi que ce soit :
 1. Lis HANDOFF-IA.md à la racine du dépôt — c'est le point d'entrée, il te dit dans quel ordre

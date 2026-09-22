@@ -262,9 +262,9 @@ function Shell() {
       <aside className="side">
         <a className="brand" href="#/accueil">
           <b>
-            VISIONARY <i />
+            VISIONNARY <i />
           </b>
-          <small>WEDDING</small>
+          <small>SHOOT · CREATE · EMOTION</small>
         </a>
         {project && (
           <button className="side-shoot" onClick={() => navigate("/tournage")}>
@@ -341,9 +341,9 @@ export default function App() {
           <div className="loading">
             <span className="brand">
               <b>
-                VISIONARY <i />
+                VISIONNARY <i />
               </b>
-              <small>WEDDING</small>
+              <small>SHOOT · CREATE · EMOTION</small>
             </span>
             <p>{error || "Ouverture de votre studio…"}</p>
           </div>

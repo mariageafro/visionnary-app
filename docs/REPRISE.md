@@ -168,3 +168,11 @@
 - IDs Pexels utilisés consignés par chapitre dans `test-media/licensed/SOURCES.md` (pas de commit dans le dépôt — tout en IndexedDB du navigateur de test).
 - Compromis assumés à cette échelle : quelques répétitions d'image entre plans très proches, les plans « Interviews » et « vue en hauteur / drone » utilisent des photos génériques faute d'offre Pexels plus précise. Ce ne sont pas des recréations fidèles de CE mariage — des références de style/valeur de plan, comme le reste de la démo.
 - `npm run verifier` revérifié après ce lot (changements IndexedDB uniquement, aucun fichier source touché).
+
+## 22/09/2026 — Retour en arrière : abandon de « Visionary Wedding »
+- L'utilisateur a fait marche arrière sur tout le rebranding précédent (« on laisse tomber Visionary Wedding.com, tu laisses comme c'était avant sur mariageafro »). Tout reverti :
+- Nom et logo : `App.tsx` (×2), `Welcome.tsx` (×2, y compris l'écran de chargement auto) → « VISIONNARY / SHOOT · CREATE · EMOTION », texte redevenu comme avant l'image de logo. `index.html`, `public/manifest.webmanifest`, `package.json` → VISIONNARY. Logo fourni par l'utilisateur (`public/logo-visionary-wedding.jpg`) supprimé, plus utilisé nulle part.
+- Dépôt GitHub renommé en retour : `mariageafro/visionary-wedding` → `mariageafro/visionnary-app` (`gh repo rename`), remote Git mis à jour. Site : `mariageafro.github.io/visionnary-app/`.
+- Domaine personnalisé : déjà retiré au tour précédent (`cname:null` confirmé côté API Pages) — rien à refaire là-dessus, juste vérifié que ça tenait toujours.
+- Références mises à jour dans `PROMPT-IA.txt` et `docs/DEPLOY-SERVEUR.md` (URL du dépôt et du site). Le reste (accès direct à la démo en production, patch serveur `$PORT`, garde-fous de sécurité réseau) **conservé** — l'utilisateur n'a demandé d'annuler que le rebranding/domaine, pas les fonctionnalités ajoutées entretemps.
+- `npm run verifier` revérifié après le revert ; redéployé sur `mariageafro.github.io/visionnary-app/`, lien confirmé fonctionnel.

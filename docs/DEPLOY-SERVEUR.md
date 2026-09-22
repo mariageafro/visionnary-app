@@ -1,6 +1,6 @@
 # Serveur de synchro en ligne — pour une vraie collaboration d'équipe
 
-Le site public (`mariageafro.github.io/visionary-wedding/`) est **statique** : chaque visiteur a sa
+Le site public (`mariageafro.github.io/visionnary-app/`) est **statique** : chaque visiteur a sa
 propre copie locale, personne ne voit les modifications des autres. Ce n'est pas suffisant pour
 une équipe qui doit cocher des tâches, ajouter des plans ou valider des poses ensemble sur un
 mariage réel.
@@ -35,7 +35,7 @@ deuxième est refusée avec un message clair plutôt que d'écraser la première
 3. **Copier `data/` du compte local vers le disque persistant du serveur déployé**, pour ne pas
    repartir de zéro (ou recréer le compte directement là-bas).
 4. Une fois le serveur en ligne avec une URL stable (ex. `https://sync.mariageafro.net` ou
-   `https://visionary-wedding-sync.onrender.com`) : dans l'app, panneau Synchro → se connecter à
+   `https://visionnary-sync.onrender.com`) : dans l'app, panneau Synchro → se connecter à
    cette URL. Chaque membre de l'équipe fait pareil avec le même compte partagé.
 
 ## En attendant

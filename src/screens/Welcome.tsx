@@ -42,7 +42,12 @@ export default function Welcome() {
         <img className="welcome-bg" src="director.jpg" alt="" />
         <div className="welcome-shade" />
         <div className="welcome-body">
-          <img className="welcome-logo" src="logo-visionary-wedding.jpg" alt="Visionary Wedding" />
+          <span className="brand">
+            <b>
+              VISIONNARY <i />
+            </b>
+            <small>SHOOT · CREATE · EMOTION</small>
+          </span>
           <p className="welcome-tag">Ouverture de la démo…</p>
         </div>
       </div>
@@ -52,7 +57,12 @@ export default function Welcome() {
       <img className="welcome-bg" src="director.jpg" alt="" />
       <div className="welcome-shade" />
       <div className="welcome-body">
-        <img className="welcome-logo" src="logo-visionary-wedding.jpg" alt="Visionary Wedding" />
+        <span className="brand">
+          <b>
+            VISIONNARY <i />
+          </b>
+          <small>SHOOT · CREATE · EMOTION</small>
+        </span>
         <div className="welcome-play">
           <Play size={38} fill="currentColor" />
         </div>

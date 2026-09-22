@@ -28,12 +28,11 @@
   padding: 40px 22px calc(96px + env(safe-area-inset-bottom));
   text-align: center;
 }
-.welcome-logo {
-  width: min(260px, 70%);
-  padding: 14px 18px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: var(--shadow);
+.welcome .brand {
+  align-items: center;
+}
+.welcome .brand b {
+  font-size: 34px;
 }
 .welcome-play {
   display: grid;
