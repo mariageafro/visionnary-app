@@ -2,7 +2,7 @@ import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GripVertical, Heart, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
+import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
@@ -31,6 +31,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const activeStage=stageId||selectedStage;
   const [filter, setFilter] = useState<Filter>("all");
   const [reorder, setReorder] = useState(false);
+  const [layout, setLayout] = useState<"grid" | "carousel">("grid");
   const [editing, setEditing] = useState<Item | null>(null);
   const [viewer, setViewer] = useState<{ ids: string[]; start: number } | null>(null);
   const [pending, setPending] = useState<File[] | null>(null);
@@ -130,6 +131,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               <ArrowDownUp size={16} /> {reorder ? "Terminer" : <span className="hide-narrow">Réordonner</span>}
             </button>
           )}
+          <button className="icon-btn" aria-label={layout === "grid" ? "Passer en mode carrousel" : "Passer en mode grille"} title={layout === "grid" ? "Vue carrousel (glisser à gauche/droite)" : "Vue grille"} onClick={() => setLayout(layout === "grid" ? "carousel" : "grid")}>
+            {layout === "grid" ? <GalleryHorizontal size={18} /> : <LayoutGrid size={18} />}
+          </button>
         </div>
       </div>
 
@@ -192,7 +196,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 </>}
               </div>
             </div>
-            {!(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed && <div className={"pose-wall" + (reorder ? " is-reordering" : "")}>
+            {!(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed && <div className={"pose-wall" + (reorder ? " is-reordering" : "") + (layout === "carousel" ? " is-carousel" : "")}>
               {list.map((pose, n) => {
                 const thumb = mediaFor(media, pose);
                 const op = operators.get(String(pose.operatorId));

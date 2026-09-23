@@ -45,6 +45,20 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* Vue carrousel : mêmes cartes, en ligne, glisser à gauche/droite au lieu de faire défiler la page. */
+.pose-wall.is-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 2px 16px 10px;
+  scrollbar-width: thin;
+}
+.pose-wall.is-carousel .pose-tile {
+  flex: 0 0 min(72vw, 260px);
+  scroll-snap-align: start;
+}
 .pose-tile {
   position: relative;
   border-radius: 16px;

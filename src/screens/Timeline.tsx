@@ -127,6 +127,9 @@ export default function Timeline() {
       )}
       {tab === "regie" && (
         <div className="stack">
+          <p className="muted" style={{ margin: "0 2px" }}>
+            Le suivi en direct du jour J : démarrez chaque étape, voyez le retard ou l’avance en temps réel, et validez un recalcul du planning si besoin.
+          </p>
           <DayRun project={p} update={update} notify={notify} />
           <SunCard project={p} />
         </div>

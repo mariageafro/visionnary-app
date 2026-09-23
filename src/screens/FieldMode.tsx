@@ -230,7 +230,7 @@ export default function FieldMode() {
               {!running && (
                 <p className="muted field-not-started">Le tournage n’a pas encore démarré · appuyez sur « démarrer » ci-dessus quand vous êtes prêt.</p>
               )}
-              <section className="field-shot">
+              <section className="field-shot" style={nowOp ? { borderLeft: `4px solid ${nowOp.color}` } : undefined}>
                 <div className="field-ref" onClick={() => ref && setViewer(true)}>
                   {ref ? (
                     <Thumb media={ref} className="field-ref-img" full />
