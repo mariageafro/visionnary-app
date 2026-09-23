@@ -223,7 +223,7 @@ export default function FieldMode() {
 
           {shot ? (
             <>
-              <div className="field-label now">
+              <div className={"field-label" + (running ? " now" : "")}>
                 <b>{running ? "MAINTENANT" : "PREMIER PLAN À PRÉPARER"}</b>
                 <span>{where(shot)}</span>
               </div>
