@@ -15,7 +15,7 @@ import "./poses.css";
 import "./viewer.css";
 
 const categoryOf = (i: Item) => String(i.category || "Sans catégorie");
-type Filter = "all" | "favorites" | "essentials" | "todo" | `cat:${string}`;
+type Filter = "all" | "favorites" | "essentials" | "todo" | "hidden" | `cat:${string}`;
 const poseDragType = "application/x-visionnary-pose";
 
 /**
@@ -44,13 +44,15 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const queueImport = (files: File[], category = "", essential = false) => { setPendingCategory(category); setPendingEssential(essential); setPending(files); };
   const dragging = useFileDrop((files) => queueImport(files), !embedded);
   const all = itemsOf(p, "poses").filter((i) => !activeStage || i.stageId === activeStage);
+  // Masquées (statut « archivé ») : retirées de « Toutes » mais retrouvables ici pour les réafficher.
+  const hiddenPoses = itemsOf(p, "poses", true).filter((i) => i.status === "archivé" && (!activeStage || i.stageId === activeStage));
   const categories = poseSectionTitles(p);
   const current = filter.startsWith("cat:") ? filter.slice(4) : "";
-  const shown = all.filter((i) =>
+  const shown = filter === "hidden" ? hiddenPoses : all.filter((i) =>
     filter === "all" ? true : filter === "favorites" ? i.favorite === true : filter === "essentials" ? i.priority === "MUST HAVE" : filter === "todo" ? !done(i) : categoryOf(i) === current,
   );
   // Regroupées par catégorie (comme les chapitres de Plans & scènes) : un titre de section par catégorie présente dans le filtre courant.
-  const sections = filter === "essentials" ? [["À faire absolument", shown] as const] : categories.map((c) => [c, shown.filter((i) => categoryOf(i) === c)] as const).filter(([c, list]) => list.length || filter === "all" && (p.poseSections ?? []).some((section) => section.title === c));
+  const sections = filter === "essentials" || filter === "hidden" ? [[filter === "hidden" ? "Masquées" : "À faire absolument", shown] as const] : categories.map((c) => [c, shown.filter((i) => categoryOf(i) === c)] as const).filter(([c, list]) => list.length || filter === "all" && (p.poseSections ?? []).some((section) => section.title === c));
   const order = sections.flatMap(([, list]) => list);
   const operators = operatorsOf(p);
   const doneCount = all.filter(done).length;
@@ -158,6 +160,11 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className={"op-pill" + (filter === "todo" ? " on" : "")} aria-pressed={filter === "todo"} onClick={() => setFilter("todo")}>
             À faire <small>{all.length - doneCount}</small>
           </button>
+          {hiddenPoses.length > 0 && (
+            <button className={"op-pill" + (filter === "hidden" ? " on" : "")} aria-pressed={filter === "hidden"} onClick={() => setFilter("hidden")}>
+              <EyeOff size={14} /> Masquées <small>{hiddenPoses.length}</small>
+            </button>
+          )}
           {categories.map((c) => (
             <button key={c} className={"op-pill" + (current === c ? " on" : "")} aria-pressed={current === c} onClick={() => setFilter(`cat:${c}`)}>
               {c} <small>{all.filter((i) => categoryOf(i) === c).length}</small>

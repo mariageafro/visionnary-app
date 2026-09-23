@@ -905,8 +905,20 @@ export function stageTemplate(p: Project, stageId: string): Preset | undefined {
     kind: "étape",
   };
 }
+/**
+ * Duplique un tournage entier pour servir de modèle à un autre mariage : toute la progression
+ * (statuts, prises, horaires réels) repart de zéro, comme duplicateStage pour une seule étape.
+ * Les références médias (mediaId/imageId/coverId/sourceMediaId, fonds et caméras du Scene Designer)
+ * sont conservées ici (contrairement à une copie de plan isolé) : l'appelant (Shoot.tsx) duplique
+ * ensuite les fichiers eux-mêmes dans IndexedDB pour ce nouveau tournage, en s'appuyant sur le même
+ * repérage d'identifiants (items dans le même ordre que `p.items`, un par un).
+ */
 export function duplicateProject(p: Project): Project {
-  const items = cloneItems(p.items);
+  const items = cloneItems(p.items, true).map((copy) => {
+    const next: Item = { ...copy, status: copy.status === "archivé" ? "archivé" : "prévu" };
+    for (const key of freshKeys) delete next[key];
+    return next;
+  });
   const itemIds = new Map(p.items.map((item, n) => [item.id, items[n].id]));
   const scenes = p.scenes?.map(scene => ({ ...scene, id: uid() }));
   const sceneIds = new Map(p.scenes?.map((scene, n) => [scene.id, scenes![n].id]));
@@ -919,10 +931,11 @@ export function duplicateProject(p: Project): Project {
     }),
   );
   // Plans de scène : liens vers les étapes, lieux, membres et plans suivis ; fonds et références
-  // épinglées retirés, comme les autres médias (ils ne sont pas copiés).
-  const scenePlans = p.scenePlans?.map((plan) => clonePlan(plan, itemIds));
+  // épinglées conservés (comme le reste des médias, voir plus haut), à remapper par l'appelant.
+  const scenePlans = p.scenePlans?.map((plan) => clonePlan(plan, itemIds, true));
   return {
     ...p, id: uid(), name: p.name + " — copie", items, scenes, moments, scenePlans, coverId: undefined,
+    status: p.status === "archivé" ? "archivé" : "en préparation",
     placements: p.placements.map(x => ({ ...x, id: uid(),
       operatorId: x.operatorId ? itemIds.get(x.operatorId) : undefined,
       sceneId: x.sceneId ? sceneIds.get(x.sceneId) : undefined,

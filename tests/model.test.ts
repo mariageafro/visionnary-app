@@ -26,7 +26,7 @@ describe("relations et copies", () => {
     expect(copy[1].mediaId).toBeUndefined();
     expect(shot.mediaId).toBe("image");
   });
-  it("duplique projet et placements sans référence aux médias originaux", () => {
+  it("duplique projet et placements en gardant les références médias (l'appelant duplique les fichiers)", () => {
     const p = newProject();
     p.coverId = "cover";
     p.items = [makeItem("notes", "Test", { imageId: "img" })];
@@ -48,10 +48,27 @@ describe("relations et copies", () => {
     ];
     const copy = duplicateProject(p);
     expect(copy.id).not.toBe(p.id);
+    // La couverture du tournage n'est pas reportée automatiquement (l'appelant peut en choisir une nouvelle).
     expect(copy.coverId).toBeUndefined();
-    expect(copy.items[0].imageId).toBeUndefined();
+    // Mais la référence média d'un élément, elle, est conservée : à l'appelant de dupliquer le fichier en pointant dessus.
+    expect(copy.items[0].imageId).toBe("img");
     expect(copy.placements[0].id).not.toBe("pos");
     expect(copy.placements[0].operator).toBe("Camille");
+  });
+  it("dupliquer un tournage entier (modèle pour un autre mariage) remet toute la progression à zéro", () => {
+    const p = newProject("Original");
+    p.status = "terminé";
+    p.items = [
+      makeItem("shots", "Plan tourné", { status: "tourné", startedAt: "2026-01-01T10:00:00.000Z", takesLog: "1,2,3" }),
+      makeItem("stages", "Étape finie", { status: "fait", startedAt: "2026-01-01T09:00:00.000Z", endedAt: "2026-01-01T10:00:00.000Z" }),
+      makeItem("checklists", "Archivée", { status: "archivé" }),
+    ];
+    const copy = duplicateProject(p);
+    expect(copy.status).toBe("en préparation");
+    expect(copy.items.map((i) => i.status)).toEqual(["prévu", "prévu", "archivé"]);
+    expect(copy.items[0].startedAt).toBeUndefined();
+    expect(copy.items[0].takesLog).toBeUndefined();
+    expect(copy.items[1].endedAt).toBeUndefined();
   });
   it("valide les presets livrés et rejette les références de mauvais type", () => {
     expect(validateWorkspace({ ...workspace(), presets: presetLibrary() })).toBeTruthy();
@@ -85,7 +102,7 @@ describe('compatibilité des nouveaux modules', () => {
     p.items = [makeItem('drone', 'Repérage extérieur')];
     expect(validateWorkspace({...workspace(), projects:[p], activeProjectId:p.id})).toBeTruthy();
   });
-  it('duplique scènes, opérateurs et retire les références vidéo originales', () => {
+  it('duplique scènes, opérateurs et garde la référence média (à dupliquer par l’appelant)', () => {
     const p = newProject();
     const member = makeItem('team', 'Camille');
     p.items = [member, makeItem('shots', 'Plan', {operatorId:member.id, sourceMediaId:'original'})];
@@ -96,7 +113,7 @@ describe('compatibilité des nouveaux modules', () => {
     expect(copy.placements[0].sceneId).toBe(copy.scenes![0].id);
     expect(copy.placements[0].operatorId).toBe(copy.items[0].id);
     expect(copy.items[1].operatorId).toBe(copy.items[0].id);
-    expect(copy.items[1].sourceMediaId).toBeUndefined();
+    expect(copy.items[1].sourceMediaId).toBe('original');
     expect(p.items[1].sourceMediaId).toBe('original');
   });
 });

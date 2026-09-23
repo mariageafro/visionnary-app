@@ -33,11 +33,11 @@ import {
   ClipboardList,
   Check,
 } from "lucide-react";
-import type { Item, Project } from "../types";
-import { coverage, done, duplicateProject, makeItem, moduleById } from "../model";
+import type { Item, MediaEntry, Project } from "../types";
+import { coverage, done, duplicateProject, makeItem, mediaReferenceKeys, moduleById, uid } from "../model";
 import { featureItems, features, withOrder } from "../features";
 import { useProject } from "../store";
-import { deleteMedia, listMedia } from "../storage";
+import { deleteMedia, listMedia, putMedia } from "../storage";
 import { MediaManager, Row, Screen, Sheet, Tabs, Thumb, navigate, useMedia } from "../ui";
 import { fr, itemsOf, ItemEditor, MemberAvatar, QuickAdd, daysUntil, jLabel, nextOrder } from "./common";
 import { StageTimeline } from "./Timeline";
@@ -207,9 +207,34 @@ export default function Shoot({ tab: initial }: { tab?: string }) {
           <div className="btn-row">
             <button
               className="btn small"
-              onClick={() => {
+              onClick={async () => {
                 const copy = duplicateProject(p);
-                change({ ...w, projects: [...w.projects, copy], activeProjectId: copy.id }, "Copie créée (sans les médias)");
+                // duplicateProject garde les mêmes identifiants de médias (pratique pour un modèle
+                // à réutiliser) : on duplique ici les fichiers eux-mêmes pour ce nouveau tournage,
+                // puis on fait pointer la copie sur ces nouveaux fichiers.
+                const itemIds = new Map(p.items.map((item, n) => [item.id, copy.items[n].id]));
+                const originalMedia = await listMedia(p.id);
+                const mediaIds = new Map<string, string>();
+                for (const entry of originalMedia) {
+                  const newId = uid();
+                  mediaIds.set(entry.id, newId);
+                  const next: MediaEntry = { ...entry, id: newId, projectId: copy.id, itemId: itemIds.get(entry.itemId) ?? entry.itemId };
+                  await putMedia(next);
+                }
+                const remapMedia = (id?: string) => (id ? mediaIds.get(id) : undefined);
+                const items = copy.items.map((item) => {
+                  const next = { ...item };
+                  for (const key of mediaReferenceKeys) if (next[key]) { const mapped = remapMedia(String(next[key])); if (mapped) next[key] = mapped; else delete next[key]; }
+                  return next;
+                });
+                const scenePlans = copy.scenePlans?.map((plan) => ({
+                  ...plan,
+                  background: plan.background && remapMedia(plan.background.mediaId) ? { ...plan.background, mediaId: remapMedia(plan.background.mediaId)! } : undefined,
+                  model3dId: remapMedia(plan.model3dId),
+                  elements: plan.elements.map((el) => (el.referenceId ? { ...el, referenceId: remapMedia(el.referenceId) } : el)),
+                }));
+                const withMedia = { ...copy, items, scenePlans };
+                change({ ...w, projects: [...w.projects, withMedia], activeProjectId: withMedia.id }, "Copie créée avec ses médias, progression remise à zéro");
               }}
             >
               <Copy size={15} /> Dupliquer
