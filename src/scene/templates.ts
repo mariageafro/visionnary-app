@@ -74,6 +74,42 @@ export const sceneTemplates: SceneTemplate[] = [
     },
   },
   {
+    id: "mairie",
+    name: "Mairie · cérémonie civile",
+    description: "Salle des mariages 10 × 8 m : table de l’officiant, couple face à lui, témoins, rangées d’invités. CAM A wide tête-aux-pieds, CAM B/CAM C champ-contrechamp sur le couple pendant les vœux, CAM D sur les réactions des invités.",
+    build() {
+      const p = newPlan("Mairie", { width: 12, height: 10 });
+      p.elements.push(...room(p, 10, 8, 1, 1));
+      p.elements.push(
+        assetElement(p, "porte", { x: 6, y: 9 }, { w: 2, name: "Entrée" }),
+        assetElement(p, "table-rect", { x: 6, y: 2 }, { name: "Table de l’officiant" }),
+        assetElement(p, "rangees", { x: 4.35, y: 6.3 }, { rows: 4, cols: 5, w: 2.75, h: 4.4, name: "Invités côté mariée" }),
+        assetElement(p, "rangees", { x: 8.15, y: 6.3 }, { rows: 4, cols: 5, w: 2.75, h: 4.4, name: "Invités côté marié" }),
+        assetElement(p, "fleurs", { x: 4.8, y: 2 }, {}),
+        assetElement(p, "fleurs", { x: 7.2, y: 2 }, {}),
+      );
+      const officiant = makePerson("officiant", { x: 6, y: 1.5 }, { rotation: 90, name: "Officiant d’état civil" });
+      const bride = makePerson("mariee", { x: 5.4, y: 3.6 }, { rotation: -90 });
+      const groom = makePerson("marie", { x: 6.6, y: 3.6 }, { rotation: -90 });
+      const witness1 = makePerson("temoin", { x: 4.3, y: 3.7 }, { rotation: -90, name: "Témoin de la mariée" });
+      const witness2 = makePerson("temoin", { x: 7.7, y: 3.7 }, { rotation: -90, name: "Témoin du marié" });
+      p.elements.push(officiant, bride, groom, witness1, witness2);
+      camera(p, { x: 2, y: 4.5 }, { rotation: 90, focal: 24, mission: "Master wide : tête-aux-pieds du couple, l’officiant et les témoins" });
+      const b = { x: 4, y: 1.6 };
+      camera(p, b, { rotation: aim(b, bride), focal: 85, mission: "Champ : visage de la mariée pendant les vœux", targetId: bride.id, motion: { type: "push-in", start: 2, duration: 5, distance: 0.6 } });
+      const c = { x: 8, y: 1.6 };
+      camera(p, c, { rotation: aim(c, groom), focal: 85, mission: "Contrechamp : visage du marié pendant les vœux", targetId: groom.id, motion: { type: "push-in", start: 2, duration: 5, distance: 0.6 } });
+      const d = { x: 6, y: 8.6 };
+      camera(p, d, { rotation: -90, focal: 50, mission: "Réactions des invités et des témoins", motion: { type: "pan-left", start: 4, duration: 6, sweep: -30 } });
+      p.cues = [
+        { id: uid(), t: 0, text: "Lecture des articles du Code civil" },
+        { id: uid(), t: 2, text: "Échange des consentements · CAM B/CAM C en champ-contrechamp" },
+        { id: uid(), t: 4, text: "CAM D cherche les réactions des invités" },
+      ];
+      return finish(p);
+    },
+  },
+  {
     id: "salle",
     name: "Salle de réception · 4 caméras",
     description: "Salle 20 × 14 m : tables rondes, piste, DJ, invités autour. Master, couple, réactions, gimbal en orbite pendant la première danse.",

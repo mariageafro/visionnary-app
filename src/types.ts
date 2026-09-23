@@ -59,6 +59,23 @@ export interface Scene {
   id: string;
   name: string;
 }
+/** Organisation facultative des chapitres de plans, propre à un mariage. */
+export interface ShotSection {
+  id: string;
+  title: string;
+  order: number;
+  parentId?: string;
+  collapsed?: boolean;
+  hidden?: boolean;
+}
+export interface EstimateSettings {
+  averageCutSeconds?: number;
+  marginPercent?: number;
+  style?: "calme" | "équilibré" | "dynamique" | "fast cut" | "personnalisé";
+  bRollPercent?: number;
+  multicam?: boolean;
+  operators?: number;
+}
 export interface Project {
   alerts?: { enabled:boolean; sound:boolean; vibration:boolean; notifications:boolean; thresholds:number[] };
   id: string;
@@ -91,6 +108,13 @@ export interface Project {
   scenePlans?: ScenePlan[];
   filmMinutes?: number;
   teaserSeconds?: number;
+  /** Absent sur les anciens projets : les chapitres historiques restent alors utilisés. */
+  shotSections?: ShotSection[];
+  /** Sections de la galerie photographe, distinctes des chapitres de plans vidéo. */
+  poseSections?: ShotSection[];
+  estimateSettings?: EstimateSettings;
+  /** Aides opérateur personnalisées pour ce mariage, par contexte. */
+  operatorGuide?: Record<string, string>;
 }
 export interface Preset {
   id: string;

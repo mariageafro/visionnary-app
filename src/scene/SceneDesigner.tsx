@@ -1,5 +1,5 @@
 import SceneDisplay, { cleanScene } from "./SceneDisplay";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   BoxSelect,
@@ -19,6 +19,8 @@ import {
   Minimize,
   MousePointer2,
   Move,
+  PanelRightClose,
+  PanelRightOpen,
   Pause,
   Play,
   Plus,
@@ -28,6 +30,7 @@ import {
   Timer,
   Trash2,
   Undo2,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -45,9 +48,15 @@ import MediaPicker from "./MediaPicker";
 import CameraCard from "./CameraCard";
 import { useProject } from "../store";
 import { Empty, navigate, useMedia, useMediaQuery } from "../ui";
+import { mediaChanged } from "../ui";
+import { putMedia } from "../storage";
+import { model3dImportError } from "./model3d";
+import { elementsFitPhoto, photoPlanSize as sizedForPhoto } from "./background";
 import { itemsOf, nextOrder, operatorsOf } from "../screens/common";
 import { makeItem } from "../model";
 import "./scene.css";
+
+const Model3DViewer = lazy(() => import("./Model3DViewer"));
 
 type Panel = "library" | "inspector" | "timeline" | "layers";
 const pathTypes = new Set(["dolly", "tracking", "custom", "walk", "fly-over"]);
@@ -113,6 +122,9 @@ export default function SceneDesigner({ id }: { id: string }) {
   const plan = plans.find((s) => s.id === id);
   const [display, setDisplay] = useState(cleanScene);
   const media = useMedia(p.id);
+  const [modelOpen, setModelOpen] = useState(false);
+  const [modelBusy, setModelBusy] = useState(false);
+  const modelInput = useRef<HTMLInputElement>(null);
   const canvas = useRef<CanvasHandle>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
@@ -146,6 +158,26 @@ export default function SceneDesigner({ id }: { id: string }) {
   const [card, setCard] = useState<SceneElement | null>(null);
   const [menu, setMenu] = useState(false);
   const [multi, setMulti] = useState(false);
+  // Mode concentration : replie bibliothèque et réglages pour ne garder que la toile et la lecture.
+  const [focus, setFocus] = useState(() => !!plan?.background);
+  useEffect(() => { canvas.current?.fit(); }, [focus]);
+  // Astuce affichée une seule fois, à la première caméra sélectionnée : la mécanique existe déjà,
+  // seule sa découvrabilité posait problème.
+  const [hint, setHint] = useState(() => {
+    try {
+      return localStorage.getItem("visionnary-scene-hint") !== "1";
+    } catch {
+      return true;
+    }
+  });
+  const dismissHint = () => {
+    setHint(false);
+    try {
+      localStorage.setItem("visionnary-scene-hint", "1");
+    } catch {
+      /* préférence non mémorisée */
+    }
+  };
   // Téléphone : outils posés sur le plan, panneau repliable pour laisser tout l'écran au plan.
   const compact = useMediaQuery("(max-width: 767px)");
   const phone = useMediaQuery(PHONE);
@@ -248,11 +280,31 @@ export default function SceneDesigner({ id }: { id: string }) {
     update({ ...p, items: [...p.items, item], scenePlans: plans.map((s) => (s.id === nextPlan.id ? nextPlan : s)) }, "Plan créé et lié au déroulé");
   };
   const background = view.background;
+  const backgroundMedia = background ? media.find((entry) => entry.id === background.mediaId) : undefined;
+  const modelMedia = plan.model3dId ? media.find((entry) => entry.id === plan.model3dId) : undefined;
+  const importModel = async (file?: File) => {
+    if (!file) return;
+    const issue = model3dImportError(file);
+    if (issue) return notify(issue);
+    setModelBusy(true);
+    try {
+      const id = crypto.randomUUID();
+      await putMedia({ id, projectId: p.id, itemId: plan.id, name: file.name, type: file.type || "model/" + file.name.split(".").pop()?.toLowerCase(), size: file.size, blob: file });
+      commit({ ...plan, model3dId: id }, "Modèle 3D importé");
+      mediaChanged();
+      setModelOpen(true);
+      setMenu(false);
+    } catch { notify("Impossible d’enregistrer ce modèle sur cet appareil."); }
+    finally { setModelBusy(false); if (modelInput.current) modelInput.current.value = ""; }
+  };
+  const photoPlanSize = backgroundMedia?.width && backgroundMedia.height ? sizedForPhoto(plan.width, plan.height, backgroundMedia.width, backgroundMedia.height) : undefined;
+  const canFitPhoto = photoPlanSize !== undefined && elementsFitPhoto(plan.elements, photoPlanSize.width, photoPlanSize.height);
   const openPanel = (pid: Panel) => {
+    setFocus(false);
     setPanel(pid);
     setSheetOpen(true);
   };
-  const panelVisible = (pid: Panel) => panel === pid && (sheetOpen || !phone);
+  const panelVisible = (pid: Panel) => !focus && panel === pid && (sheetOpen || !phone);
   const cue = [...plan.cues].sort((a, b) => a.t - b.t).filter((c) => c.t <= time + 0.05).at(-1);
   const label = (el: SceneElement) => (el.kind === "camera" ? el.tag ?? el.name : el.name);
 
@@ -319,11 +371,16 @@ export default function SceneDesigner({ id }: { id: string }) {
           {fullscreen ? <Minimize size={18} /> : <Expand size={18} />}
         </button>
       )}
+      <button className={"btn small sd-focus-toggle" + (focus ? " on" : "")} aria-pressed={focus} aria-label={focus ? "Afficher les panneaux" : "Agrandir la photo et masquer les panneaux"} title={focus ? "Afficher les panneaux" : "Agrandir la photo et masquer les panneaux"} onClick={() => setFocus(!focus)}>
+        {focus ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
+        <span>{focus ? "Afficher les panneaux" : "Agrandir la photo"}</span>
+      </button>
+      {modelMedia && <button className="btn small" onClick={() => setModelOpen(true)} title="Tourner et agrandir le modèle 3D du lieu"><BoxSelect size={17} /> <span className="sd-focus-toggle">Voir en 3D</span></button>}
     </>
   );
 
   return (
-    <div ref={screenRef} className={"sd-screen panel-" + panel + (sheetOpen ? "" : " sheet-closed") + (fullscreen ? " sd-fullscreen" : "")}>
+    <div ref={screenRef} className={"sd-screen panel-" + panel + (sheetOpen ? "" : " sheet-closed") + (fullscreen ? " sd-fullscreen" : "") + (focus ? " sd-focus" : "")}>
       <header className="sd-top">
         <button className="icon-btn" aria-label="Retour" onClick={() => navigate(plan.stageId ? "/etape/" + plan.stageId : "/scenes")}>
           <ArrowLeft size={21} />
@@ -363,6 +420,16 @@ export default function SceneDesigner({ id }: { id: string }) {
             <button type="button" className="sd-menu-backdrop" aria-label="Fermer le menu" onClick={() => setMenu(false)} />
             <div className="sd-menu">
               <div className="sd-menu-group">
+                <strong>Modèle 3D du lieu</strong>
+                <input ref={modelInput} type="file" accept=".glb,.obj,model/gltf-binary,model/obj" hidden onChange={(event) => void importModel(event.target.files?.[0])} />
+                <div className="btn-row">
+                  <button className="btn small" disabled={modelBusy} onClick={() => modelInput.current?.click()}><BoxSelect size={15} /> {modelBusy ? "Import…" : modelMedia ? "Remplacer le modèle GLB/OBJ" : "Importer un modèle GLB/OBJ"}</button>
+                  {modelMedia && <button className="btn small" onClick={() => { setModelOpen(true); setMenu(false); }}>Ouvrir la vue 3D</button>}
+                  {plan.model3dId && <button className="btn small danger" onClick={() => commit({ ...plan, model3dId: undefined }, "Modèle 3D détaché du plan")}><Trash2 size={15} /> Retirer du plan</button>}
+                </div>
+                <p className="muted sd-hint">Le modèle reste sur cet appareil. GLB autonome ou OBJ sans textures externes. Vous pouvez tourner la vue et créer un fond PNG.</p>
+              </div>
+              <div className="sd-menu-group">
                 <strong>Photo ou plan du lieu en fond</strong>
                 <div className="btn-row">
                   <button className="btn small" onClick={() => setPicker({ for: "background" })}>
@@ -370,6 +437,21 @@ export default function SceneDesigner({ id }: { id: string }) {
                   </button>
                   {plan.background && (
                     <>
+                      <button className="btn small" onClick={() => commit({ ...plan, background: { ...plan.background!, fit: plan.background!.fit === "cover" ? "contain" : "cover" } }, plan.background?.fit === "cover" ? "Photo entière affichée" : "Photo cadrée pour remplir le plan")}>
+                        {plan.background.fit === "cover" ? "Voir la photo entière" : "Remplir le plan"}
+                      </button>
+                      <button className="btn small" onClick={() => commit({ ...plan, background: { ...plan.background!, x: 0, y: 0, w: plan.width, fit: "cover" } }, "Photo recentrée sur tout le plan")}>
+                        Recentrer et remplir
+                      </button>
+                      <button className="btn small" disabled={!canFitPhoto} title={canFitPhoto ? "Affiche toute la photo sans couper ses côtés" : "La photo ou les éléments du plan dépassent le nouveau cadre"} onClick={() => {
+                        if (!photoPlanSize) return;
+                        commit({ ...plan, ...photoPlanSize, background: { ...plan.background!, x: 0, y: 0, w: photoPlanSize.width, fit: "contain" } }, "Plan adapté au format de la photo");
+                        setFocus(true);
+                        setMenu(false);
+                        requestAnimationFrame(() => canvas.current?.fit());
+                      }}>
+                        Photo entière · adapter le plan
+                      </button>
                       <button className="btn small" onClick={() => commit({ ...plan, background: { ...plan.background!, locked: !plan.background!.locked } }, plan.background?.locked ? "Fond déverrouillé" : "Fond verrouillé")}>
                         {plan.background.locked ? <LockOpen size={15} /> : <Lock size={15} />} {plan.background.locked ? "Déverrouiller" : "Verrouiller"}
                       </button>
@@ -484,7 +566,15 @@ export default function SceneDesigner({ id }: { id: string }) {
           {tool === "path" && <p className="sd-banner">Touchez le plan pour poser les points de la trajectoire · {compact ? "touchez « Sélection » pour terminer" : "Échap pour terminer"}</p>}
           {tool === "background" && <p className="sd-banner">Glissez pour caler la photo du lieu sous le plan</p>}
           {multi && tool === "select" && <p className="sd-banner">Sélection multiple : touchez les éléments, ou glissez sur le vide pour les entourer</p>}
-          {phone && selected.length > 0 && !panelVisible("inspector") && tool === "select" && !multi && (
+          {hint && tool === "select" && !multi && single?.kind === "camera" && (
+            <div className="sd-banner sd-hint">
+              <span>Glissez pour déplacer · la poignée ronde tourne · « Mouvement » choisit push, pull, travelling, orbit ou drone</span>
+              <button type="button" aria-label="Fermer l’astuce" onClick={dismissHint}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          {!focus && phone && selected.length > 0 && !panelVisible("inspector") && tool === "select" && !multi && (
             <button type="button" className="sd-selchip" onClick={() => openPanel("inspector")}>
               <SlidersHorizontal size={15} />
               <span>{selected.length === 1 ? label(selected[0]) : `${selected.length} éléments`}</span>
@@ -496,7 +586,7 @@ export default function SceneDesigner({ id }: { id: string }) {
               <button className="sd-play" aria-label={playing ? "Pause" : "Lecture"} onClick={toggle}>
                 {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
               </button>
-              <button type="button" className="sd-mini-time" onClick={() => openPanel("timeline")} aria-label="Ouvrir la timeline">
+              <button type="button" className="sd-mini-time" onClick={() => (focus ? setFocus(false) : openPanel("timeline"))} aria-label="Ouvrir la timeline">
                 <span className="sd-time">
                   {timecode(time)} <small>/ {timecode(duration)}</small>
                 </span>
@@ -504,7 +594,7 @@ export default function SceneDesigner({ id }: { id: string }) {
               </button>
             </div>
           )}
-          {!panelVisible("library") && (
+          {!focus && !panelVisible("library") && (
             <button className="sd-fab" aria-label="Ajouter un élément" onClick={() => openPanel("library")}>
               <Plus size={22} />
             </button>
@@ -606,8 +696,10 @@ export default function SceneDesigner({ id }: { id: string }) {
           onClose={() => setPicker(null)}
           onPick={(m) => {
             if (picker.for === "background") {
-              const w = Math.max(plan.width, 10);
-              commit({ ...plan, background: { mediaId: m.id, x: 0, y: 0, w, opacity: 0.55 } }, "Photo du lieu en fond · calez-la puis verrouillez-la");
+              const adapt = m.width && m.height && !plan.elements.length ? sizedForPhoto(plan.width, plan.height, m.width, m.height) : undefined;
+              const width = adapt?.width ?? plan.width;
+              commit({ ...plan, ...adapt, background: { mediaId: m.id, x: 0, y: 0, w: width, fit: "contain", opacity: 0.55 } }, "Photo du lieu en fond · calez-la puis verrouillez-la");
+              setFocus(true);
               setTool("background");
               setMenu(false);
             } else commit(updateElements(plan, [picker.el.id], { referenceId: m.id }), "Référence épinglée sur " + (picker.el.tag ?? picker.el.name));
@@ -616,6 +708,15 @@ export default function SceneDesigner({ id }: { id: string }) {
         />
       )}
       {card && <CameraCard el={plan.elements.find((e) => e.id === card.id) ?? card} plan={plan} media={media} operator={operators.get(String(card.operatorId))} shots={shots} onClose={() => setCard(null)} />}
+      {modelOpen && modelMedia && <Suspense fallback={<div className="sd-model-backdrop"><p>Chargement de la vue 3D…</p></div>}><Model3DViewer media={modelMedia} onClose={() => setModelOpen(false)} onCapture={async (blob, width, height) => {
+        const imageId = crypto.randomUUID();
+        await putMedia({ id: imageId, projectId: p.id, itemId: plan.id, name: `${modelMedia.name.replace(/\.(glb|obj)$/i, "")}-vue-3d.png`, type: "image/png", size: blob.size, blob, width, height });
+        mediaChanged();
+        const adapt = !plan.elements.length ? sizedForPhoto(plan.width, plan.height, width, height) : undefined;
+        commit({ ...plan, ...adapt, background: { mediaId: imageId, x: 0, y: 0, w: adapt?.width ?? plan.width, fit: "contain", opacity: 0.85 } }, "Vue 3D ajoutée comme fond du plan");
+        setFocus(true);
+        setModelOpen(false);
+      }} /></Suspense>}
     </div>
   );
 

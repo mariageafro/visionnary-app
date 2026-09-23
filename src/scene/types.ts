@@ -59,6 +59,9 @@ export interface SceneElement {
   h?: number;
   shape?: "rect" | "ellipse";
   color?: string;
+  /** Teint de la personne ; la couleur principale représente ses vêtements. */
+  skinColor?: string;
+  outfit?: "robe" | "costume" | "tenue";
   locked?: boolean;
   hidden?: boolean;
   groupId?: string;
@@ -84,6 +87,8 @@ export interface SceneElement {
   /** Hauteur de l'objectif, en mètres. */
   height?: number;
   operatorId?: string;
+  /** Un cadreur est dessiné à côté de la caméra, même avant son affectation nominative. */
+  operatorPresent?: boolean;
   support?: string;
   mission?: string;
   framing?: string;
@@ -101,6 +106,8 @@ export interface SceneElement {
   beam?: number;
   /** Portée utile, en mètres. */
   reach?: number;
+  /** État prévu de la source lumineuse (la lumière reste visible sur le plan lorsqu'elle est éteinte). */
+  lightOn?: boolean;
 
   // Drone
   altitude?: number;
@@ -123,6 +130,8 @@ export interface SceneBackground {
   x: number;
   y: number;
   w: number;
+  /** « contain » (défaut) montre la photo entière ; « cover » remplit le plan. */
+  fit?: "cover" | "contain";
   opacity: number;
   locked?: boolean;
 }
@@ -136,6 +145,8 @@ export interface ScenePlan {
   width: number;
   height: number;
   background?: SceneBackground;
+  /** Modèle du lieu en GLB ou OBJ, conservé dans les médias locaux du tournage. */
+  model3dId?: string;
   /** Direction du nord sur le plan (0 = haut), pour placer le soleil. */
   north?: number;
   /** Heure simulée pour le soleil (« HH:MM »). */

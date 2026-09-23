@@ -85,9 +85,10 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
     const b = bounds(plan.elements) ?? { minX: 0, minY: 0, maxX: plan.width, maxY: plan.height };
     const minX = Math.min(b.minX, 0);
     const minY = Math.min(b.minY, 0);
-    const maxX = Math.max(b.maxX, plan.elements.length ? b.maxX : plan.width);
-    const maxY = Math.max(b.maxY, plan.elements.length ? b.maxY : plan.height);
+    const maxX = Math.max(b.maxX, plan.background || !plan.elements.length ? plan.width : b.maxX);
+    const maxY = Math.max(b.maxY, plan.background || !plan.elements.length ? plan.height : b.maxY);
     const scale = clamp(Math.min(size.w / (maxX - minX + 2), size.h / (maxY - minY + 2)), 4, 400);
+    fitted.current = false;
     setView({ cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale });
   };
   // Cadrage automatique tant qu'on n'a pas soi-même zoomé ou déplacé la vue (la taille de l'écran
@@ -303,7 +304,7 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
   const statics = visible.filter((el) => ["zone", "wall", "object", "rows"].includes(el.kind));
   const order = (kinds: string[]) => visible.filter((el) => kinds.includes(el.kind));
   const bg = plan.background;
-  const bgHeight = bg && bgMedia?.width && bgMedia.height ? bg.w * (bgMedia.height / bgMedia.width) : bg ? bg.w * 0.66 : 0;
+  const bgHeight = bg ? plan.height * (bg.w / plan.width) : 0;
   // Quadrillage : un mètre, et un trait plus marqué tous les cinq mètres.
   const grid = useMemo(() => {
     let minor = "";
@@ -363,6 +364,7 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
         }}
       >
         <defs>
+          <clipPath id="sd-plan-background-clip"><rect x={0} y={0} width={plan.width} height={plan.height} /></clipPath>
           <marker id="sd-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
           </marker>
@@ -373,7 +375,7 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
         </defs>
         <rect x={vx} y={vy} width={vw} height={vh} fill="#0d0e0e" />
         <rect x={0} y={0} width={plan.width} height={plan.height} fill="#141716" />
-        {bg && bgUrl && <image href={bgUrl} x={bg.x} y={bg.y} width={bg.w} height={bgHeight} opacity={bg.opacity} preserveAspectRatio="none" className="sd-bg" />}
+        {bg && bgUrl && <g clipPath="url(#sd-plan-background-clip)"><image href={bgUrl} x={bg.x} y={bg.y} width={bg.w} height={bgHeight} opacity={bg.opacity} preserveAspectRatio={bg.fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"} className="sd-bg" /></g>}
         {props.display?.grid !== false && <path d={grid.minor} stroke="#ffffff" strokeOpacity={0.06} strokeWidth={1} vectorEffect="non-scaling-stroke" fill="none" pointerEvents="none" />}
         {props.display?.grid !== false && <path d={grid.major} stroke="#ffffff" strokeOpacity={0.13} strokeWidth={1} vectorEffect="non-scaling-stroke" fill="none" pointerEvents="none" />}
 
@@ -455,16 +457,18 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
           const a = rad(selected.rotation);
           const cx = pose.x + (w / 2) * Math.cos(a) - (h / 2) * Math.sin(a);
           const cy = pose.y + (w / 2) * Math.sin(a) + (h / 2) * Math.cos(a);
-          const handle = 10 / view.scale;
+          // Poignées agrandies au premier contact (14/26 px au lieu de 10/22) : la mécanique était
+          // déjà là, seule sa visibilité posait problème.
+          const handle = 14 / view.scale;
           return (
             <g>
               <line x1={pose.x} y1={pose.y} x2={hx} y2={hy} stroke="#e6c27f" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-              <circle data-role="rotate" cx={hx} cy={hy} r={22 / view.scale} fill="transparent" className="sd-handle rotate" />
-              <circle data-role="rotate" cx={hx} cy={hy} r={handle} fill="#e6c27f" stroke="#2b2111" strokeWidth={1} vectorEffect="non-scaling-stroke" className="sd-handle rotate">
+              <circle data-role="rotate" cx={hx} cy={hy} r={26 / view.scale} fill="transparent" className="sd-handle rotate" />
+              <circle data-role="rotate" cx={hx} cy={hy} r={handle} fill="#e6c27f" stroke="#2b2111" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className="sd-handle rotate">
                 <title>Tourner</title>
               </circle>
               {SIZED.has(selected.kind) && (
-                <rect data-role="resize" x={cx - handle} y={cy - handle} width={handle * 2} height={handle * 2} fill="#fff" stroke="#2b2111" strokeWidth={1} vectorEffect="non-scaling-stroke" className="sd-handle resize">
+                <rect data-role="resize" x={cx - handle} y={cy - handle} width={handle * 2} height={handle * 2} fill="#fff" stroke="#2b2111" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className="sd-handle resize">
                   <title>Redimensionner</title>
                 </rect>
               )}

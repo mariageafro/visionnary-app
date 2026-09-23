@@ -1,11 +1,15 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { ArrowRightLeft, Camera, Check, Clapperboard, Copy, Focus, Maximize2, MoreHorizontal, Pencil, Plane, Play, Plus, RotateCcw, Scissors, Star, Sun, Trash2, UserRound, Users, Video } from "lucide-react";
+import { ArrowRightLeft, Camera, Check, Clapperboard, Copy, Focus, MapPin, Maximize2, MoreHorizontal, Navigation, Pencil, Plane, Play, Plus, RotateCcw, Scissors, Star, Sun, Trash2, UserRound, Users, Video } from "lucide-react";
 import type { Item, MediaEntry, ModuleId, Project } from "../types";
-import { done, framingCode, makeItem, moduleById, priorities, statuses, uid, type Field } from "../model";
+import { done, framingCode, makeItem, moduleById, priorities, shotSections, statuses, uid, type Field } from "../model";
 import { shotKind } from "../stageStats";
 import { useProject } from "../store";
 import { MediaManager, MediaViewer, Sheet, useMedia, useObjectUrl, Thumb } from "../ui";
 import FramingPicto from "./FramingPicto";
+import { appendInterviewQuestions, interviewTypes } from "../interviews";
+import { guideContext, operatorGuides } from "../operatorGuide";
+import { poseSectionTitles } from "../poseSections";
+import { stageColorChoices, stageIconChoices, stageLook } from "./stageIcons";
 
 export const fr = (date: string, options: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", year: "numeric" }) =>
   /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + "T12:00").toLocaleDateString("fr-FR", options) : "Date à définir";
@@ -24,6 +28,22 @@ export function daysUntil(date: string) {
 }
 export const jLabel = (days: number | null) =>
   days === null ? "" : days === 0 ? "Jour J" : days > 0 ? `J−${days}` : `il y a ${-days} j`;
+
+/** Ouvre une adresse dans Google Maps ou Waze, sans jamais changer la position en 2 clics : deux boutons distincts. */
+export function AddressLinks({ address }: { address?: string }) {
+  const a = String(address || "").trim();
+  if (!a) return null;
+  return (
+    <span className="address-links">
+      <a className="btn small" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`}>
+        <MapPin size={14} /> Maps
+      </a>
+      <a className="btn small" target="_blank" rel="noopener noreferrer" href={`https://waze.com/ul?q=${encodeURIComponent(a)}&navigate=yes`}>
+        <Navigation size={14} /> Waze
+      </a>
+    </span>
+  );
+}
 
 export const itemsOf = (p: Project, module: ModuleId, archived = false) =>
   p.items.filter((i) => i.module === module && (archived || i.status !== "archivé")).sort((a, b) => a.order - b.order);
@@ -132,6 +152,16 @@ export function MemberAvatar({ member, projectId }: { member: Item; projectId: s
   );
 }
 
+/** Avatar d'un tournage : sa photo de couverture, sinon les initiales du couple — pour reconnaître le bon projet d'un coup d'œil dans « Mes tournages ». */
+export function CoupleAvatar({ project }: { project: { id: string; coverId?: string; couple: string; name: string } }) {
+  const cover = useMedia(project.id, project.id).find((m) => m.id === project.coverId);
+  return (
+    <span className="avatar">
+      {cover ? <Thumb media={cover} className="avatar-thumb" /> : <Initials name={project.couple || project.name} />}
+    </span>
+  );
+}
+
 /* ---------- Galerie (Plans & scènes, Inspirations, Poses, Lieux) ---------- */
 
 /**
@@ -202,6 +232,7 @@ export function MediaCard({
   onEdit,
   operator,
   transition,
+  onFavorite,
   animate = false,
 }: {
   item: Item;
@@ -215,6 +246,7 @@ export function MediaCard({
   operator?: Operator;
   /** Transition prévue vers le plan suivant. */
   transition?: string;
+  onFavorite?: () => void;
 }) {
   const isVideo = thumb?.type.startsWith("video/");
   const isShot = item.module === "shots";
@@ -235,9 +267,14 @@ export function MediaCard({
           <span className="insp-empty">{icon}</span>
         )}
         <span className="insp-shade" />
+        {onFavorite && <span className="insp-favorite"><Star size={14} fill={item.favorite === true ? "currentColor" : "none"} /></span>}
         <span className="insp-badges">
           {isShot && <ShotStatus item={item} />}
           {item.priority === "MUST HAVE" && !(isShot && done(item)) && <span className="chip red">MUST</span>}
+          {isShot && item.bRoll === "oui" && <span className="chip dark">B-roll</span>}
+          {isShot && item.teaser === "oui" && <span className="chip dark">Teaser</span>}
+          {isShot && item.sde === "indispensable" && <span className="chip gold">SDE · indispensable</span>}
+          {isShot && item.sde === "utile" && <span className="chip dark">SDE · utile</span>}
           {isVideo && Number(thumb?.duration) > 0 && (
             <span className="chip dark insp-duration">
               <Play size={9} fill="#fff" /> {clockShort(Number(thumb!.duration))}
@@ -273,6 +310,7 @@ export function MediaCard({
       <button type="button" className="icon-btn insp-edit" aria-label={"Modifier " + (item.title || "l’élément")} onClick={onEdit}>
         <MoreHorizontal size={16} />
       </button>
+      {onFavorite && <button type="button" className="icon-btn insp-favorite-button" aria-pressed={item.favorite === true} aria-label={item.favorite === true ? "Retirer des favoris" : "Ajouter aux favoris"} onClick={onFavorite}><Star size={16} fill={item.favorite === true ? "currentColor" : "none"} /></button>}
     </div>
   );
 }
@@ -309,6 +347,10 @@ export function QuickView({
   const module = moduleById(item.module)!;
   const thumb = mediaFor(media, item);
   const [full, setFull] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const guideId = guideContext(item);
+  const guide = operatorGuides[guideId] ?? operatorGuides.general;
+  const guideText = project.operatorGuide?.[guideId] ?? guide.tips.join("\n");
   const keys = (highlights[item.module] ?? module.fields.slice(0, 4).map((f) => f.key)).filter((k) => item[k]);
   const operator = item.module === "shots" ? operatorsOf(project).get(String(item.operatorId)) : undefined;
   const spec = (k: string) => (
@@ -359,6 +401,12 @@ export function QuickView({
           </div>
         )}
         {item.notes && <p className="quickview-notes">{item.notes}</p>}
+        {["shots", "stages", "interviews", "live", "drone", "dance"].includes(item.module) && (
+          <>
+            <button type="button" className="btn" aria-expanded={showGuide} onClick={() => setShowGuide((open) => !open)}>Aide · {guide.title}</button>
+            {showGuide && <div className="notice"><ul>{guideText.split("\n").map((tip, index) => tip.trim() && <li key={index}>{tip}</li>)}</ul><button type="button" className="btn small" onClick={onEdit}>Personnaliser dans cette fiche</button></div>}
+          </>
+        )}
         <div className="btn-row">
           <button className="btn gold" onClick={onEdit}>
             <Pencil size={15} /> Modifier
@@ -479,7 +527,7 @@ function FieldInput({ field, item, project, set }: { field: Field; item: Item; p
       />
       {list && (
         <datalist id={list}>
-          {field.suggest!.map((s) => (
+          {[...new Set([...field.suggest!, ...(item.module === "poses" && field.key === "category" ? poseSectionTitles(project).filter((title) => title !== "Sans catégorie") : []), ...(item.module === "shots" && field.key === "section" ? (project.shotSections ?? []).map((section) => section.title) : [])])].map((s) => (
             <option key={s} value={s} />
           ))}
         </datalist>
@@ -491,11 +539,15 @@ function FieldInput({ field, item, project, set }: { field: Field; item: Item; p
 /** Éditeur commun à tous les modules : champs du module, médias, duplication, suppression. */
 export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () => void; extra?: ReactNode }) {
   const { project: p, update, removeItem, addItems } = useProject();
+  const availableMedia = useMedia(p.id);
   const module = moduleById(item.module)!;
   const [draft, setDraft] = useState(item);
+  const [linkedMediaOpen, setLinkedMediaOpen] = useState(false);
   const exists = p.items.some((i) => i.id === item.id);
+  const linkedMedia = draft.sourceMediaId ? availableMedia.find((entry) => entry.id === draft.sourceMediaId) : undefined;
   const set = (key: string, v: string | number) => setDraft((d) => ({ ...d, [key]: v }));
   const isShot = item.module === "shots";
+  const guideKey = guideContext(draft);
   function save(e?: FormEvent) {
     e?.preventDefault();
     if (!draft.title.trim()) return;
@@ -524,7 +576,7 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
               className="icon-btn"
               aria-label="Dupliquer"
               onClick={() => {
-                const copy: Item = { ...draft, id: uid(), title: draft.title + " (copie)", order: p.items.filter((i) => i.module === draft.module).length };
+                const copy: Item = { ...draft, id: uid(), title: draft.title + " (copie)", sourceMediaId: draft.sourceMediaId || mediaFor(availableMedia, draft)?.id, order: nextOrder(p, draft.module) };
                 addItems([copy], "Copie créée");
                 onClose();
               }}
@@ -550,7 +602,43 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
           Titre
           <input autoFocus={!exists} required maxLength={200} value={draft.title} onChange={(e) => set("title", e.target.value)} />
         </label>
+        {item.module === "stages" && (() => {
+            const look = stageLook(draft.title, draft);
+            return (
+              <div className="field span stage-look-picker">
+                Icône et couleur de l’étape
+                <div className="choices" style={{ marginBottom: 8 }}>
+                  <button type="button" className={"choice" + (!draft.icon ? " on" : "")} onClick={() => setDraft((d) => ({ ...d, icon: "" }))}>
+                    Automatique (selon le titre)
+                  </button>
+                </div>
+                <div className="icon-grid">
+                  {Object.entries(stageIconChoices).filter(([key]) => key !== "auto").map(([key, IconChoice]) => (
+                    <button type="button" key={key} className={"icon-swatch" + (draft.icon === key ? " on" : "")} style={{ color: draft.icon === key ? String(draft.color || look.color) : undefined }} aria-label={key} onClick={() => setDraft((d) => ({ ...d, icon: key }))}>
+                      <IconChoice size={18} />
+                    </button>
+                  ))}
+                </div>
+                <div className="icon-grid" style={{ marginTop: 8 }}>
+                  {stageColorChoices.map((c) => (
+                    <button type="button" key={c} className={"color-swatch" + (draft.color === c ? " on" : "")} style={{ background: c }} aria-label={c} onClick={() => set("color", c)} />
+                  ))}
+                  <button type="button" className={"color-swatch" + (!draft.color ? " on" : "")} style={{ background: "transparent", border: "1px dashed var(--text-2)" }} aria-label="Couleur automatique" onClick={() => setDraft((d) => ({ ...d, color: "" }))} />
+                </div>
+              </div>
+            );
+          })()}
         <div className="form-grid">
+          {item.module === "interviews" && <div className="field span">
+            Modèle de questions (ajoute sans effacer)
+            <div className="choices">{interviewTypes.map((type) => <button type="button" className="choice" key={type} onClick={() => setDraft((current) => ({ ...current, interviewType: type, questions: appendInterviewQuestions(String(current.questions || ""), type) }))}>{type}</button>)}</div>
+          </div>}
+          {isShot && exists && <label className="field span">Déplacer vers…
+            <select value={String(draft.section || "")} onChange={(e) => set("section", e.target.value)}>
+              <option value="">Autres plans</option>
+              {[...new Set([...shotSections, ...(p.shotSections ?? []).map((section) => section.title), ...p.items.filter((entry) => entry.module === "shots").map((entry) => String(entry.section || "")).filter(Boolean)])].map((section) => <option key={section} value={section}>{section}</option>)}
+            </select>
+          </label>}
           {(isShot || ["checklists", "reminders", "postproduction"].includes(item.module) || exists) && (
             <label className="field">
               Statut
@@ -561,11 +649,11 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
               </select>
             </label>
           )}
-          {["shots", "checklists", "inspirations", "drone", "poses"].includes(item.module) && (
+          {["shots", "checklists", "inspirations", "drone", "poses", "reminders"].includes(item.module) && (
             <label className="field">
               Priorité
               <select value={draft.priority} onChange={(e) => set("priority", e.target.value)}>
-                {priorities.map((s) => (
+                {(item.module === "reminders" ? ["INFORMATION", "IMPORTANT", "CRITIQUE"] : priorities).map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </select>
@@ -577,6 +665,7 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
               <label className={"field" + (f.long ? " span" : "")} key={f.key}>
                 {f.label}
                 <FieldInput field={f} item={draft} project={p} set={set} />
+                {f.key === "address" && <AddressLinks address={String(draft.address || "")} />}
               </label>
             ))}
           <label className="field span">
@@ -584,6 +673,9 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
             <textarea value={draft.notes} onChange={(e) => set("notes", e.target.value)} />
           </label>
         </div>
+        {["shots", "stages", "interviews", "live", "drone", "dance", "poses"].includes(item.module) && (
+          <OperatorGuideEditor key={guideKey} guideKey={guideKey} />
+        )}
         {extra}
         <div className="form-actions">
           <button type="button" className="btn" onClick={onClose}>
@@ -594,10 +686,15 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
           </button>
         </div>
       </form>
+      {linkedMedia && <div className="notice" style={{ marginTop: 14 }}>
+        <span>Référence liée au fichier existant, sans copie du média.</span>
+        <button type="button" className="btn small" onClick={() => setLinkedMediaOpen(true)}>Ouvrir la référence</button>
+      </div>}
       {exists ? (
         <MediaManager
           projectId={p.id}
           itemId={item.id}
+          protectedIds={new Set(p.items.filter((entry) => entry.id !== item.id).map((entry) => String(entry.sourceMediaId || "")).filter(Boolean))}
           title={item.module === "team" ? "Photo du membre" : item.module === "venues" ? "Photos & vidéos de repérage" : "Références photo & vidéo"}
           onClip={
             item.module === "inspirations" || item.module === "shots"
@@ -624,6 +721,33 @@ export function ItemEditor({ item, onClose, extra }: { item: Item; onClose: () =
           Enregistrez d’abord pour ajouter photos et vidéos.
         </p>
       )}
+      {linkedMediaOpen && linkedMedia && <MediaViewer media={linkedMedia} onClose={() => setLinkedMediaOpen(false)} />}
     </Sheet>
+  );
+}
+
+function OperatorGuideEditor({ guideKey }: { guideKey: string }) {
+  const { project: p, update } = useProject();
+  const guide = operatorGuides[guideKey] ?? operatorGuides.general;
+  const defaults = guide.tips.join("\n");
+  const [text, setText] = useState(p.operatorGuide?.[guideKey] ?? defaults);
+  const save = () => update({ ...p, operatorGuide: { ...(p.operatorGuide ?? {}), [guideKey]: text } }, "Aide opérateur enregistrée pour ce mariage");
+  const reset = () => {
+    const next = { ...(p.operatorGuide ?? {}) };
+    delete next[guideKey];
+    update({ ...p, operatorGuide: next }, "Aide par défaut rétablie");
+    setText(defaults);
+  };
+  return (
+    <details className="notice operator-guide">
+      <summary>Aide opérateur · {guide.title}</summary>
+      <p className="muted">Conseils courts selon le contexte. Cette aide est personnalisable pour ce mariage.</p>
+      <ul>{text.split("\n").map((tip, index) => tip.trim() && <li key={index}>{tip}</li>)}</ul>
+      <label className="field">Personnaliser les conseils pour ce mariage<textarea value={text} onChange={(e) => setText(e.target.value)} /></label>
+      <div className="btn-row">
+        <button type="button" className="btn gold" onClick={save}>Enregistrer l’aide</button>
+        <button type="button" className="btn" onClick={reset}>Rétablir les conseils par défaut</button>
+      </div>
+    </details>
   );
 }

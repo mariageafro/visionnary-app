@@ -1,19 +1,22 @@
 import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
-import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, Check, ChevronLeft, ChevronRight, Eye, EyeOff, Heart, Pencil, Play, Plus, Star, X } from "lucide-react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
+import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GripVertical, Heart, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
+import { operatorGuides } from "../operatorGuide";
+import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { Empty, MediaViewer, Screen, Thumb, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
-import { DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
+import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
 import "./poses.css";
 import "./viewer.css";
 
 const categoryOf = (i: Item) => String(i.category || "Sans catégorie");
-type Filter = "all" | "favorites" | "todo" | `cat:${string}`;
+type Filter = "all" | "favorites" | "essentials" | "todo" | `cat:${string}`;
+const poseDragType = "application/x-visionnary-pose";
 
 /**
  * Pose Board : le moodboard photo du mariage. Les références gardent leur format (façon Pinterest),
@@ -31,21 +34,73 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [editing, setEditing] = useState<Item | null>(null);
   const [viewer, setViewer] = useState<{ ids: string[]; start: number } | null>(null);
   const [pending, setPending] = useState<File[] | null>(null);
-  const dragging = useFileDrop((files) => setPending(files), !embedded);
+  const [pendingCategory, setPendingCategory] = useState("");
+  const [pendingEssential, setPendingEssential] = useState(false);
+  const [newSection, setNewSection] = useState("");
+  const [renaming, setRenaming] = useState("");
+  const [renameDraft, setRenameDraft] = useState("");
+  const [dragTarget, setDragTarget] = useState("");
+  const [photoGuide, setPhotoGuide] = useState(p.operatorGuide?.photo ?? operatorGuides.photo.tips.join("\n"));
+  const queueImport = (files: File[], category = "", essential = false) => { setPendingCategory(category); setPendingEssential(essential); setPending(files); };
+  const dragging = useFileDrop((files) => queueImport(files), !embedded);
   const all = itemsOf(p, "poses").filter((i) => !activeStage || i.stageId === activeStage);
-  const present = [...new Set(all.map(categoryOf))];
-  const categories = [...present.filter((c) => poseCategories.includes(c)).sort((a, b) => poseCategories.indexOf(a) - poseCategories.indexOf(b)), ...present.filter((c) => !poseCategories.includes(c))];
+  const categories = poseSectionTitles(p);
   const current = filter.startsWith("cat:") ? filter.slice(4) : "";
   const shown = all.filter((i) =>
-    filter === "all" ? true : filter === "favorites" ? i.favorite === true : filter === "todo" ? !done(i) : categoryOf(i) === current,
+    filter === "all" ? true : filter === "favorites" ? i.favorite === true : filter === "essentials" ? i.priority === "MUST HAVE" : filter === "todo" ? !done(i) : categoryOf(i) === current,
   );
+  // Regroupées par catégorie (comme les chapitres de Plans & scènes) : un titre de section par catégorie présente dans le filtre courant.
+  const sections = filter === "essentials" ? [["À faire absolument", shown] as const] : categories.map((c) => [c, shown.filter((i) => categoryOf(i) === c)] as const).filter(([c, list]) => list.length || filter === "all" && (p.poseSections ?? []).some((section) => section.title === c));
+  const order = sections.flatMap(([, list]) => list);
   const operators = operatorsOf(p);
   const doneCount = all.filter(done).length;
-  const add = () => setEditing(makeItem("poses", "", { order: nextOrder(p, "poses"), ...(activeStage ? { stageId:activeStage } : {}), ...(current && current !== "Sans catégorie" ? { category: current } : {}) }));
-  // Réordonner : on échange l'ordre avec la voisine visible (même filtre), sans toucher aux autres.
-  const move = (item: Item, step: number) => {
-    const at = shown.findIndex((i) => i.id === item.id);
-    const other = shown[at + step];
+  const add = (section = current, essential = filter === "essentials") => setEditing(makeItem("poses", "", { order: nextOrder(p, "poses"), ...(activeStage ? { stageId:activeStage } : {}), ...(section && section !== "Sans catégorie" && section !== "À faire absolument" ? { category: section } : {}), ...(essential ? { priority: "MUST HAVE" } : {}) }));
+  const createSection = () => {
+    const next = addPoseSection(p, newSection);
+    if (next === p) return;
+    update(next, `Section photo « ${newSection.trim()} » créée`);
+    setNewSection("");
+    setFilter("all");
+  };
+  const saveSectionTitle = (section: string) => {
+    const next = renamePoseSection(p, section, renameDraft);
+    if (next === p && section !== renameDraft.trim()) return;
+    if (next !== p) update(next, `Section photo « ${section} » renommée`);
+    if (current === section) setFilter(`cat:${renameDraft.trim()}`);
+    setRenaming("");
+  };
+  const deleteSection = (section: string) => {
+    if (!window.confirm(`Supprimer la section photo « ${section} » ? Ses poses et leurs photos seront conservées dans « Sans catégorie ».`)) return;
+    update(removePoseSection(p, section), `Section photo « ${section} » supprimée ; poses conservées`);
+    if (current === section) setFilter("all");
+  };
+  const duplicateSection = (section: string) => {
+    let title = `${section} (copie)`;
+    let number = 2;
+    while (poseSectionTitles(p).includes(title)) title = `${section} (copie ${number++})`;
+    const configured = addPoseSection(p, title);
+    const copies = itemsOf(p, "poses").filter((pose) => categoryOf(pose) === section).map((pose, index) => ({ ...pose, id: crypto.randomUUID(), title: `${pose.title} (copie)`, category: title, sourceMediaId: pose.sourceMediaId || mediaFor(media, pose)?.id, status: "prévu", order: nextOrder(p, "poses") + index }));
+    update({ ...configured, items: [...configured.items, ...copies] }, `Section photo « ${section} » dupliquée avec ${copies.length} pose(s)`);
+    setFilter(`cat:${title}`);
+  };
+  const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragTarget("");
+    if (Array.from(event.dataTransfer.types).includes("Files")) {
+      const files = Array.from(event.dataTransfer.files).filter(accepted);
+      if (files.length) queueImport(files, section === "À faire absolument" ? "" : section, section === "À faire absolument");
+      return;
+    }
+    const id = event.dataTransfer.getData(poseDragType);
+    if (!id) return;
+    if (section === "À faire absolument") patchItem(id, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
+    else patchItem(id, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
+  };
+  // Réordonner : on échange l'ordre avec la voisine de la même section, sans toucher aux autres.
+  const move = (list: Item[], item: Item, step: number) => {
+    const at = list.findIndex((i) => i.id === item.id);
+    const other = list[at + step];
     if (!other) return;
     update({ ...p, items: p.items.map((i) => (i.id === item.id ? { ...i, order: other.order } : i.id === other.id ? { ...i, order: item.order } : i)) });
   };
@@ -64,10 +119,10 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           </div>
         </div>
         <div className="board-actions">
-          <button className="btn gold" onClick={add}>
+          <button className="btn gold" onClick={() => add()}>
             <Plus size={17} /> Ajouter<span className="hide-narrow"> une pose</span>
           </button>
-          <PickFiles label={<>Importer<span className="hide-narrow"> des références</span></>} onFiles={setPending} />
+          <PickFiles label={<>Importer<span className="hide-narrow"> des références</span></>} onFiles={(files) => queueImport(files, current, filter === "essentials")} />
           {all.length > 1 && (
             <button className={"btn" + (reorder ? " gold" : "")} aria-pressed={reorder} aria-label="Réordonner les poses" onClick={() => setReorder(!reorder)}>
               <ArrowDownUp size={16} /> {reorder ? "Terminer" : <span className="hide-narrow">Réordonner</span>}
@@ -76,13 +131,29 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       </div>
 
-      {all.length > 0 && (
+      <div className="pose-customize">
+        <form className="pose-section-create" onSubmit={(event) => { event.preventDefault(); createSection(); }}>
+          <label className="sr-only" htmlFor="pose-new-section">Titre de la nouvelle section photo</label>
+          <input id="pose-new-section" value={newSection} onChange={(event) => setNewSection(event.target.value)} placeholder="Nouvelle section photo…" maxLength={80} />
+          <button className="btn small" type="submit" disabled={!newSection.trim()}><Plus size={15} /> Section</button>
+        </form>
+        <details className="pose-guide-editor">
+          <summary>Consignes photographe</summary>
+          <label className="field">Consignes pour ce mariage<textarea value={photoGuide} onChange={(event) => setPhotoGuide(event.target.value)} /></label>
+          <div className="btn-row"><button className="btn small gold" onClick={() => update({ ...p, operatorGuide: { ...(p.operatorGuide ?? {}), photo: photoGuide } }, "Consignes photographe enregistrées")}>Enregistrer les consignes</button><button className="btn small" onClick={() => { const defaults = operatorGuides.photo.tips.join("\n"); const next = { ...(p.operatorGuide ?? {}) }; delete next.photo; setPhotoGuide(defaults); update({ ...p, operatorGuide: next }, "Consignes photographe par défaut rétablies"); }}>Rétablir par défaut</button></div>
+        </details>
+      </div>
+
+      {(all.length > 0 || categories.length > 0) && (
         <div className="pose-filters" role="group" aria-label="Filtrer les poses">
           <button className={"op-pill" + (filter === "all" ? " on" : "")} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
             Toutes <small>{all.length}</small>
           </button>
           <button className={"op-pill" + (filter === "favorites" ? " on" : "")} aria-pressed={filter === "favorites"} onClick={() => setFilter("favorites")}>
             <Star size={14} /> Favoris <small>{all.filter((i) => i.favorite === true).length}</small>
+          </button>
+          <button className={"op-pill" + (filter === "essentials" ? " on" : "")} aria-pressed={filter === "essentials"} onClick={() => setFilter("essentials")}>
+            À faire absolument <small>{all.filter((i) => i.priority === "MUST HAVE").length}</small>
           </button>
           <button className={"op-pill" + (filter === "todo" ? " on" : "")} aria-pressed={filter === "todo"} onClick={() => setFilter("todo")}>
             À faire <small>{all.length - doneCount}</small>
@@ -95,54 +166,75 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       )}
 
-      {shown.length ? (
-        <div className={"pose-wall" + (reorder ? " is-reordering" : "")}>
-          {shown.map((pose, n) => {
-            const thumb = mediaFor(media, pose);
-            const op = operators.get(String(pose.operatorId));
-            const isVideo = thumb?.type.startsWith("video/");
-            return (
-              <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")}>
-                <button type="button" className="pose-media" onClick={() => setViewer({ ids: shown.map((i) => i.id), start: n })} aria-label={"Voir la pose " + (pose.title || "")}>
-                  <span className="pose-frame">
-                    {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}
-                  </span>
-                  {isVideo && Number(thumb?.duration) > 0 && (
-                    <span className="chip dark insp-duration pose-duration">
-                      <Play size={9} fill="#fff" /> {clockShort(Number(thumb!.duration))}
-                    </span>
-                  )}
-                  <span className="pose-shade" />
-                  <span className="pose-info">
-                    <strong>{pose.title || "Sans titre"}</strong>
-                    <small>
-                      {filter.startsWith("cat:") ? "" : categoryOf(pose)}
-                      {op && (
-                        <>
-                          <i style={{ background: op.color }} /> {op.name}
-                        </>
-                      )}
-                    </small>
-                  </span>
-                </button>
-                <button type="button" className="pose-fav" aria-pressed={pose.favorite === true} aria-label={pose.favorite === true ? "Retirer des favoris" : "Ajouter aux favoris"} onClick={() => patchItem(pose.id, { favorite: pose.favorite !== true })}>
-                  <Star size={15} fill={pose.favorite === true ? "currentColor" : "none"} />
-                </button>
-                <QuickStatus item={pose}/>
-                {reorder && (
-                  <div className="pose-move">
-                    <button type="button" aria-label="Avancer" disabled={n === 0} onClick={() => move(pose, -1)}>
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button type="button" aria-label="Reculer" disabled={n === shown.length - 1} onClick={() => move(pose, 1)}>
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
+      {sections.length ? (
+        sections.map(([section, list]) => (
+          <section key={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
+            <div className="section-title pose-section-head">
+              {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
+              {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{section}</strong>}
+              <span>{list.filter(done).length}/{list.length}</span>
+              <div className="pose-section-actions">
+                <button className="btn small" onClick={() => add(section, section === "À faire absolument")}><Plus size={14} /> Pose</button>
+                <PickFiles className="btn small" label="Photo / vidéo" onFiles={(files) => queueImport(files, section === "À faire absolument" ? "" : section, section === "À faire absolument")} />
+                {section !== "À faire absolument" && <>
+                  <button className="icon-btn small" aria-label={`Renommer ${section}`} onClick={() => { setRenaming(section); setRenameDraft(section); }}><Pencil size={15} /></button>
+                  <button className="icon-btn small" aria-label={`Dupliquer ${section}`} onClick={() => duplicateSection(section)}><Copy size={15} /></button>
+                  <button className="icon-btn small" aria-label={`Monter ${section}`} disabled={categories.indexOf(section) <= 0} onClick={() => update(movePoseSection(p, section, -1), "Sections photo réordonnées")}>↑</button>
+                  <button className="icon-btn small" aria-label={`Descendre ${section}`} disabled={categories.indexOf(section) >= categories.length - 1} onClick={() => update(movePoseSection(p, section, 1), "Sections photo réordonnées")}>↓</button>
+                  {section !== "Sans catégorie" && <button className="icon-btn small" aria-label={`Supprimer ${section}`} onClick={() => deleteSection(section)}><Trash2 size={15} /></button>}
+                </>}
               </div>
-            );
-          })}
-        </div>
+            </div>
+            {!(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed && <div className={"pose-wall" + (reorder ? " is-reordering" : "")}>
+              {list.map((pose, n) => {
+                const thumb = mediaFor(media, pose);
+                const op = operators.get(String(pose.operatorId));
+                const isVideo = thumb?.type.startsWith("video/");
+                return (
+                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")}>
+                    <button type="button" className="pose-media" onClick={() => setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) })} aria-label={"Voir la pose " + (pose.title || "")}>
+                      <span className="pose-frame">
+                        {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}
+                      </span>
+                      {isVideo && Number(thumb?.duration) > 0 && (
+                        <span className="chip dark insp-duration pose-duration">
+                          <Play size={9} fill="#fff" /> {clockShort(Number(thumb!.duration))}
+                        </span>
+                      )}
+                      <span className="pose-shade" />
+                      <span className="pose-info">
+                        <strong>{pose.title || "Sans titre"}</strong>
+                        <small>
+                          {op && (
+                            <>
+                              <i style={{ background: op.color }} /> {op.name}
+                            </>
+                          )}
+                        </small>
+                      </span>
+                    </button>
+                    <button type="button" className="pose-fav" aria-pressed={pose.favorite === true} aria-label={pose.favorite === true ? "Retirer des favoris" : "Ajouter aux favoris"} onClick={() => patchItem(pose.id, { favorite: pose.favorite !== true })}>
+                      <Star size={15} fill={pose.favorite === true ? "currentColor" : "none"} />
+                    </button>
+                    <button type="button" className="pose-essential" aria-pressed={pose.priority === "MUST HAVE"} aria-label={pose.priority === "MUST HAVE" ? "Retirer des essentiels photo" : "Marquer essentiel photo"} onClick={() => patchItem(pose.id, { priority: pose.priority === "MUST HAVE" ? "IMPORTANT" : "MUST HAVE" })}>Essentiel</button>
+                    <span className="pose-drag" draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(poseDragType, pose.id); }} onDragEnd={() => setDragTarget("")} title={`Glisser « ${pose.title} » vers une autre section`} aria-label={`Déplacer ${pose.title} à la souris`}><GripVertical size={16} /></span>
+                    <QuickStatus item={pose}/>
+                    {reorder && (
+                      <div className="pose-move">
+                        <button type="button" aria-label="Avancer" disabled={n === 0} onClick={() => move(list, pose, -1)}>
+                          <ChevronLeft size={18} />
+                        </button>
+                        <button type="button" aria-label="Reculer" disabled={n === list.length - 1} onClick={() => move(list, pose, 1)}>
+                          <ChevronRight size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>}
+          </section>
+        ))
       ) : (
         <Empty
           icon={<Heart size={32} />}
@@ -155,8 +247,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           action={
             !all.length ? (
               <div className="btn-row" style={{ justifyContent: "center" }}>
-                <PickFiles className="btn gold" label="Importer des références" onFiles={setPending} />
-                <button className="btn" onClick={add}>
+                <PickFiles className="btn gold" label="Importer des références" onFiles={(files) => queueImport(files)} />
+                <button className="btn" onClick={() => add()}>
                   <Plus size={17} /> Ajouter une pose
                 </button>
               </div>
@@ -173,12 +265,12 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           target="pose"
           targets={["pose"]}
           categories={[...new Set([...categories.filter((c) => c !== "Sans catégorie"), ...poseCategories])]}
-          category={current && current !== "Sans catégorie" ? current : ""}
+          category={pendingCategory && pendingCategory !== "Sans catégorie" ? pendingCategory : ""}
           onClose={() => setPending(null)}
           onConfirm={(_target, _section, category) => {
-            void importer.run(pending, "pose", { ...(activeStage ? { stageId:activeStage } : {}), ...(category ? { category } : {}) }, all.length);
+            void importer.run(pending, "pose", { ...(activeStage ? { stageId:activeStage } : {}), ...(category ? { category } : {}), ...(pendingEssential ? { priority: "MUST HAVE" } : {}) }, all.length);
             setPending(null);
-            if (category) setFilter(`cat:${category}`);
+            if (pendingEssential) setFilter("essentials"); else if (category) setFilter(`cat:${category}`);
           }}
         />
       )}
@@ -292,6 +384,7 @@ export function PoseViewer({ ids, start, onClose, onEdit }: { ids: string[]; sta
                   <Star size={12} fill="currentColor" /> Favori
                 </span>
               )}
+              {pose.priority === "MUST HAVE" && <span className="chip red">Essentiel photo</span>}
               {done(pose) && (
                 <span className="chip green">
                   <Check size={13} /> Réalisée
@@ -331,13 +424,21 @@ export function PoseViewer({ ids, start, onClose, onEdit }: { ids: string[]; sta
                 </div>
               </div>
             )}
+            <label className="field sv-transition">Déplacer vers une section photo
+              <select value={String(pose.category || "")} onChange={(event) => patchItem(pose.id, { category: event.target.value || undefined }, "Pose déplacée ; références conservées") }>
+                <option value="">Sans catégorie</option>
+                {poseSectionTitles(p).filter((title) => title !== "Sans catégorie" && title !== "À faire absolument").map((title) => <option key={title} value={title}>{title}</option>)}
+              </select>
+            </label>
             {pose.notes && <p className="sv-notes">{pose.notes}</p>}
+            <details className="sv-notes"><summary>Consignes photographe</summary><p style={{ whiteSpace: "pre-line" }}>{p.operatorGuide?.photo ?? operatorGuides.photo.tips.join("\n")}</p></details>
           </div>
         </div>
         <nav className="sv-status pose-status" aria-label="Statut de la pose">
           <button className={"star" + (pose.favorite === true ? " on" : "")} aria-label="Favori" onClick={() => patchItem(pose.id, { favorite: pose.favorite !== true })}>
             <Star size={20} fill={pose.favorite === true ? "currentColor" : "none"} />
           </button>
+          <button className={pose.priority === "MUST HAVE" ? "on" : ""} aria-pressed={pose.priority === "MUST HAVE"} onClick={() => patchItem(pose.id, { priority: pose.priority === "MUST HAVE" ? "IMPORTANT" : "MUST HAVE" })}>ESSENTIEL</button>
           <button className={!done(pose) ? "on" : ""} onClick={() => patchItem(pose.id, { status: "prévu" })}>
             À FAIRE
           </button>

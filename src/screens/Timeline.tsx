@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { CalendarPlus, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import type { Item, Project } from "../types";
 import { makeItem } from "../model";
 import { useProject } from "../store";
@@ -20,7 +20,7 @@ export function StageTimeline({ project: p }: { project: Project }) {
   return (
     <ol className="stage-line">
       {runs.map((r) => {
-        const { Icon, color } = stageLook(r.item.title);
+        const { Icon, color } = stageLook(r.item.title, r.item);
         const shots = p.items.filter((i) => i.module === "shots" && i.stageId === r.item.id);
         return (
           <li key={r.item.id} className={"state-" + r.state.replace(" ", "-")}>
@@ -58,8 +58,15 @@ export default function Timeline() {
   const { project: p, update, notify } = useProject();
   const [tab, setTab] = useState<"timeline" | "list" | "regie">("timeline");
   const [editing, setEditing] = useState<Item | null>(null);
+  const [eventTitle, setEventTitle] = useState("");
   const stages = p.items.filter((i) => i.module === "stages" && i.status !== "archivé").sort((a, b) => a.order - b.order);
   const add = () => setEditing(makeItem("stages", "", { order: stages.length, duration: 30, time: String(stages.at(-1)?.time ?? "") }));
+  const addUnexpectedEvent = () => {
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    setEditing(makeItem("stages", eventTitle.trim(), { category: "Événement imprévu", time, duration: 15, priority: "IMPORTANT", order: stages.length }));
+    setEventTitle("");
+  };
   function move(i: Item, d: number) {
     const idx = stages.findIndex((s) => s.id === i.id);
     const target = stages[idx + d];
@@ -82,6 +89,10 @@ export default function Timeline() {
           ["regie", "Régie"],
         ]}
       />
+      <div className="card" style={{ margin: "12px 0", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
+        <label className="field" style={{ flex: "1 1 220px", margin: 0 }}>Événement imprévu<input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="Discours surprise, animation…" onKeyDown={(e) => { if (e.key === "Enter" && eventTitle.trim()) addUnexpectedEvent(); }} /></label>
+        <button className="btn gold" onClick={addUnexpectedEvent} disabled={!eventTitle.trim()}><CalendarPlus size={16} /> Ajouter maintenant</button>
+      </div>
       {tab === "timeline" && <StageTimeline project={p} />}
       {tab === "list" && (
         <>

@@ -58,6 +58,14 @@
   background: #000;
   touch-action: pan-y;
 }
+.sv-main.info-hidden .sv-stage {
+  min-height: min(82dvh, 900px);
+}
+.sv-main.info-hidden .sv-stage .thumb.sv-img,
+.sv-main.info-hidden .sv-stage .thumb.sv-img img,
+.sv-main.info-hidden .sv-video {
+  max-height: min(82dvh, 900px);
+}
 .sv-stage .thumb.sv-img {
   width: 100%;
   height: 100%;

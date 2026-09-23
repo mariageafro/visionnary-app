@@ -2,7 +2,7 @@ import MediaPicker from "./MediaPicker";
 import { useScenePlans } from "./store";
 import { updateElements } from "./ops";
 import { useEffect, useRef, useState } from "react";
-import { Camera, Clapperboard, Crosshair, MoveRight, Ruler, X } from "lucide-react";
+import { Camera, Clapperboard, Crosshair, Eye, EyeOff, MoveRight, Ruler, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import type { SceneElement, ScenePlan } from "./types";
 import { movementById, sensorById, supports } from "./catalog";
@@ -33,6 +33,7 @@ export default function CameraCard({
 }) {
   const {save} = useScenePlans();
   const [picking,setPicking] = useState(false);
+  const [showInfo, setShowInfo] = useState(true);
   const el=plan.elements.find(e=>e.id===initialEl.id)??initialEl;
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -68,9 +69,11 @@ export default function CameraCard({
             <strong>{el.tag ?? el.name}</strong>
             <small>{plan.name}</small>
           </div>
-          <span style={{ width: 40 }} />
+          <button className="icon-btn" aria-pressed={!showInfo} aria-label={showInfo ? "Cacher les infos" : "Montrer les infos"} title={showInfo ? "Cacher les infos" : "Montrer les infos"} onClick={() => setShowInfo(!showInfo)}>
+            {showInfo ? <EyeOff size={19} /> : <Eye size={19} />}
+          </button>
         </header>
-        <div className="sv-main">
+        <div className={"sv-main" + (showInfo ? "" : " info-hidden")}>
           <div className="sv-stage">
             {reference ? (
               reference.type.startsWith("video/") ? (

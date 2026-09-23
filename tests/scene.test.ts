@@ -5,11 +5,26 @@ import { poseAt, progress, sceneLength, trail } from "../src/scene/motion";
 import { sceneTemplates } from "../src/scene/templates";
 import { addElements, alignElements, assetElement, clonePlan, duplicateElements, expandGroups, groupElements, makePerson, newPlan, removeElements, withMovement } from "../src/scene/ops";
 import { legacyPlan } from "../src/scene/legacy";
+import { assetById } from "../src/scene/catalog";
 import { duplicateProject, makeItem, newProject } from "../src/model";
 import { validateWorkspace } from "../src/exports";
 
 const el = (extra: Partial<SceneElement>): SceneElement => ({ id: "x", kind: "camera", name: "CAM A", x: 0, y: 0, rotation: 0, layer: "cameras", ...extra });
 const near = (a: number, b: number, eps = 0.02) => expect(Math.abs(a - b)).toBeLessThan(eps);
+
+describe("caméras prêtes à placer", () => {
+  it("prépare le cadreur sur trépied et stabilisateur sans affecter quelqu’un d’office", () => {
+    const plan = newPlan("Test");
+    const tripod = assetElement(plan, "camera-trepied-operateur", { x: 3, y: 4 });
+    const stabilizer = assetElement(addElements(plan, [tripod]), "camera-stab-operateur", { x: 5, y: 4 });
+    expect(tripod.support).toBe("trepied");
+    expect(stabilizer.support).toBe("gimbal");
+    expect(tripod.operatorPresent && stabilizer.operatorPresent).toBe(true);
+    expect(tripod.operatorId).toBeUndefined();
+    expect(assetElement(plan, "camera", { x: 2, y: 2 }).operatorPresent).toBe(true);
+    expect(assetById("camera-public")?.defaults?.mission).toContain("Réactions");
+  });
+});
 
 describe("champ de vision d’une caméra", () => {
   it("calcule l’angle selon capteur et focale", () => {

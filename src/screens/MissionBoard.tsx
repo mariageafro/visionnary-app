@@ -3,7 +3,7 @@ import { Camera, ChevronRight, Clapperboard, Map, Pencil, Plus } from 'lucide-re
 import { useProject } from '../store';
 import { done, makeItem } from '../model';
 import type { Item } from '../types';
-import { missionItems, pendingMission, subjectOf, subjects, type Subject } from '../missions';
+import { matchesTag, missionItems, missionTags, pendingMission, subjectOf, subjects, type MissionTag, type Subject } from '../missions';
 import { Screen, Thumb, navigate, useMedia } from '../ui';
 import { ItemEditor, MediaCard, itemsOf, mediaFor, operatorsOf } from './common';
 import ShotViewer from './ShotViewer';
@@ -17,9 +17,11 @@ export default function MissionBoard(){
  const {project:p}=useProject(); const media=useMedia(p.id);
  const [subject,setSubject]=useState<Subject>('Tous');const [stageId,setStageId]=useState('');
  const [kind,setKind]=useState('all');const [editing,setEditing]=useState<Item|null>(null);const [viewing,setViewing]=useState<Item|null>(null);
+ const [tag,setTag]=useState<MissionTag|''>('');
  const swipe=useRef<{x:number;y:number}|null>(null);
  const stages=itemsOf(p,'stages');const operators=operatorsOf(p);
- const all=missionItems(p);const list=all.filter(i=>(subject==='Tous'||subjectOf(i)===subject)&&(!stageId||i.stageId===stageId)&&(kind==='all'||(kind==='photo'?i.module==='poses'||isPhotoShot(i):i.module==='shots'&&isVideoShot(i))));
+ const all=missionItems(p);const bySide=all.filter(i=>(subject==='Tous'||subjectOf(i)===subject)&&(!stageId||i.stageId===stageId)&&(kind==='all'||(kind==='photo'?i.module==='poses'||isPhotoShot(i):i.module==='shots'&&isVideoShot(i))));
+ const list=bySide.filter(i=>matchesTag(i,tag));
  const next=list.find(pendingMission);const stage=stages.find(i=>i.id===stageId);
  const legs=travelLegs(p);
  const displayStages=stageId?[stage]:[...stages,undefined];
@@ -30,6 +32,10 @@ export default function MissionBoard(){
  <button className="mission-alert-link" onClick={()=>navigate("/rappels")}>Rappels terrain <span>{p.alerts?.enabled?`Activés · ${p.alerts.thresholds.join(" / ")} min`:"Activer les alertes"} →</span></button>
  <div className="mission-filters"><select aria-label="Moment de la journée" value={stageId} onChange={e=>setStageId(e.target.value)}><option value="">Toute la journée</option>{stages.map(s=><option key={s.id} value={s.id}>{s.time} · {s.title}</option>)}</select><select aria-label="Missions photo ou vidéo" value={kind} onChange={e=>setKind(e.target.value)}><option value="all">Photo & vidéo</option><option value="photo">Photo</option><option value="video">Vidéo</option></select></div>
  <div className="subject-tabs" role="group" aria-label="Côté du mariage">{subjects.map(s=><button key={s} aria-pressed={subject===s} onClick={()=>setSubject(s)}>{s}</button>)}</div>
+ <div className="op-pills" role="group" aria-label="Affiner par groupe">
+   <button type="button" className={"op-pill"+(tag===''?' on':'')} aria-pressed={tag===''} onClick={()=>setTag('')}>Tous les groupes</button>
+   {missionTags.map(t=>{const n=bySide.filter(i=>matchesTag(i,t)).length;if(!n&&tag!==t)return null;return <button key={t} type="button" className={"op-pill"+(tag===t?' on':'')} aria-pressed={tag===t} onClick={()=>setTag(tag===t?'':t)}>{t} <small>{n}</small></button>;})}
+ </div>
  {next&&<button className="mission-next" onClick={()=>setViewing(next)}><Thumb media={mediaFor(media,next)} className="mission-next-thumb"/><span><small>PROCHAINE MISSION</small><strong>{next.title}</strong></span><ChevronRight size={22}/></button>}
  <div className="mission-content" onPointerDown={e=>{if((e.target as Element).closest('input,select,video,.quick-status'))return;swipe.current={x:e.clientX,y:e.clientY};}} onPointerCancel={()=>{swipe.current=null;}} onPointerUp={e=>{const start=swipe.current;swipe.current=null;if(!start)return;const dx=e.clientX-start.x;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(e.clientY-start.y)*1.5){const n=subjects.indexOf(subject)+(dx<0?1:-1);if(subjects[n]){setSubject(subjects[n]);const block=(event:MouseEvent)=>{event.preventDefault();event.stopPropagation();};document.addEventListener('click',block,{capture:true,once:true});setTimeout(()=>document.removeEventListener('click',block,true),300);}}}}>
  {displayStages.map(s=>{const own=list.filter(i=>s?i.stageId===s.id:!stages.some(t=>t.id===i.stageId));if(!own.length&&!s)return null;const travel=s&&legs.find(l=>l.to.id===s.id);return <section key={s?.id||'other'} className="mission-section"><div className="mission-section-head"><div><small>{String(s?.time||'À planifier')}</small><h3>{s?.title||'Autres missions'}</h3></div>{s&&<button className="btn small" aria-label={`Ouvrir ${s.title}`} onClick={()=>navigate('/etape/'+s.id)}>{own.filter(done).length}/{own.length}<ChevronRight size={16}/></button>}</div><>{travel&&<button className="mission-travel" onClick={()=>navigate("/trajets")}>Trajet depuis {travel.from.title} · départ {travelClock(travel.depart)}{travel.conflict>0?" · conflit horaire":""}<ChevronRight size={15}/></button>}</><div className="insp-grid">{own.map(i=><div key={i.id}><MediaCard item={i} thumb={mediaFor(media,i)} operator={operators.get(String(i.operatorId))} icon={i.module==='poses'?<Camera/>:<Clapperboard/>} onView={()=>setViewing(i)} onEdit={()=>setEditing(i)}/><QuickStatus item={i}/></div>)}</div>{!own.length&&<p className="muted">Aucune mission dans cette sélection.</p>}<button className="btn small mission-add" onClick={()=>setEditing(makeItem(kind==='photo'?'poses':'shots','',{stageId:s?.id,subjectGroup:subject==='Tous'?'Ensemble':subject,order:p.items.length}))}><Plus size={15}/> Ajouter une mission</button></section>;})}

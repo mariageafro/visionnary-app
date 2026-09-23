@@ -21,7 +21,7 @@ export function FieldAlertRunner({project}:{project?:Project}){
   tick();const timer=setInterval(tick,10000);document.addEventListener('visibilitychange',tick);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',tick);};
  },[]);
  if(!project?.alerts?.enabled||!pending.length)return null;
- return <aside className="field-alert-banner" role="alert"><BellRing size={22}/><div><strong>{pending[0].title}</strong>{pending.length>1&&<small>{pending.length-1} autre(s) rappel(s)</small>}<button onClick={()=>{const id=pending[0].stageId;if(id)navigate('/etape/'+id);}}>Voir la mission</button></div><button className="icon-btn" aria-label="Acquitter le rappel" onClick={()=>setPending(v=>v.slice(1))}><Check size={22}/></button></aside>;
+ return <aside className={'field-alert-banner'+(pending[0].priority==='CRITIQUE'?' is-critical':'')} role="alert"><BellRing size={22}/><div>{pending[0].priority==='CRITIQUE'&&<small className="alert-critical-label">RAPPEL CRITIQUE</small>}<strong>{pending[0].title}</strong>{pending.length>1&&<small>{pending.length-1} autre(s) rappel(s)</small>}<button onClick={()=>{const id=pending[0].stageId;if(id)navigate('/etape/'+id);}}>Voir la mission</button></div><button className="icon-btn" aria-label="Acquitter le rappel" onClick={()=>setPending(v=>v.slice(1))}><Check size={22}/></button></aside>;
 }
 export default function AlertSettings(){
  const {project:p,update,notify}=useProject();const settings=p.alerts??{enabled:false,sound:false,vibration:true,notifications:false,thresholds:[20,10,5]};

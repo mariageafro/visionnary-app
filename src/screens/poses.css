@@ -7,6 +7,23 @@
   padding: 2px 16px 4px;
   scrollbar-width: none;
 }
+.pose-customize{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+.pose-section-create{display:flex;gap:7px;min-width:min(100%,300px)}
+.pose-section-create input,.pose-rename input{min-width:0;flex:1}
+.pose-guide-editor{flex:1;min-width:min(100%,240px);border:1px solid var(--line-dark);border-radius:12px;padding:9px 12px}
+.pose-guide-editor summary{cursor:pointer;font-weight:700}
+.pose-guide-editor .field{margin-top:12px}
+.pose-guide-editor textarea{min-height:90px}
+.pose-section-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pose-section-head>strong{min-width:0;overflow-wrap:anywhere}
+.pose-section-head>.pose-section-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.pose-section-actions .btn{white-space:nowrap}
+.pose-rename{display:flex;gap:5px;flex:1;min-width:min(100%,220px)}
+.pose-folded{transform:rotate(-90deg)}
+.pose-drop-target{outline:2px dashed var(--gold);outline-offset:6px;border-radius:12px}
+.pose-drag{position:absolute;right:8px;top:51px;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#000a;border:1px solid #ffffff7a;color:#fff;cursor:grab;touch-action:none}
+.pose-drag:active{cursor:grabbing}
+@media(max-width:600px){.pose-section-head>.pose-section-actions{width:100%;margin-left:0}.pose-section-actions .btn{min-height:40px}}
 .pose-filters::-webkit-scrollbar {
   display: none;
 }
@@ -139,6 +156,8 @@
   color: var(--gold);
   border-color: var(--gold);
 }
+.pose-essential{position:absolute;left:8px;top:8px;min-height:32px;padding:5px 9px;border-radius:999px;background:#000a;border:1px solid #ffffff7a;color:#fff;font-size:11px;font-weight:800}
+.pose-essential[aria-pressed="true"]{background:#9d3434;border-color:#e28b80}
 .pose-tile.is-done .pose-thumb img {
   opacity: 0.5;
   filter: saturate(0.4);

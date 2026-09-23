@@ -1,10 +1,73 @@
 import { useState } from "react";
-import { Images, Plus, Search } from "lucide-react";
+import { Images, Plus, Search, Scissors } from "lucide-react";
 import type { Item } from "../types";
 import { makeItem } from "../model";
 import { useProject } from "../store";
-import { Empty, Screen, useMedia } from "../ui";
+import { Empty, Screen, Sheet, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, QuickView } from "./common";
+
+type Segment = { id: string; title: string; clipIn: number; clipOut: number; type: string; framing: string; movement: string; transition: string; subject: string; stageId: string; effect: string; notes: string; shotId?: string };
+const segmentsOf = (item: Item): Segment[] => {
+  try {
+    const parsed: unknown = JSON.parse(String(item.segments || "[]"));
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is Segment => !!entry && typeof entry === "object" && typeof entry.id === "string") : [];
+  } catch { return []; }
+};
+
+function SegmentsEditor({ item, mediaId, duration, onClose }: { item: Item; mediaId: string; duration?: number; onClose: () => void }) {
+  const { project: p, update } = useProject();
+  const [segments, setSegments] = useState(() => segmentsOf(item));
+  const save = (next: Segment[], message = "Découpage enregistré") => {
+    setSegments(next);
+    update({ ...p, items: p.items.map((entry) => entry.id === item.id ? { ...entry, segments: JSON.stringify(next) } : entry) }, message);
+  };
+  const edit = (id: string, key: keyof Segment, value: string | number) => setSegments((current) => current.map((segment) => segment.id === id ? { ...segment, [key]: value } : segment));
+  const createShot = (segment: Segment) => {
+    const clipIn = Math.max(0, segment.clipIn);
+    const clipOut = duration ? Math.min(duration, segment.clipOut) : segment.clipOut;
+    if (!Number.isFinite(clipIn) || !Number.isFinite(clipOut) || clipOut <= clipIn) return;
+    const shot = makeItem("shots", segment.title || item.title, {
+      referenceId: item.id, sourceMediaId: mediaId, clipIn, clipOut,
+      framing: segment.framing || undefined, segmentType: segment.type || undefined, movement: segment.movement || undefined,
+      transition: segment.transition || undefined, subject: segment.subject || undefined,
+      stageId: segment.stageId || undefined, effect: segment.effect || undefined, notes: segment.notes || undefined,
+      order: nextOrder(p, "shots"),
+    });
+    const next = segments.map((entry) => entry.id === segment.id ? { ...entry, shotId: shot.id } : entry);
+    setSegments(next);
+    update({ ...p, items: [...p.items.map((entry) => entry.id === item.id ? { ...entry, segments: JSON.stringify(next) } : entry), shot] }, "Plan créé depuis le découpage");
+  };
+  const add = () => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    save([...segments, { id, title: "Segment " + (segments.length + 1), clipIn: 0, clipOut: Math.min(duration || 5, 5), type: "", framing: "", movement: "", transition: "", subject: "", stageId: String(item.stageId || ""), effect: "", notes: "" }], "Segment ajouté");
+  };
+  return <Sheet title={"Découpage — " + (item.title || "Inspiration")} onClose={onClose}>
+    <p className="muted">Repères non destructifs : la vidéo d’origine reste intacte. Durée source : {duration ? duration.toFixed(1) + " s" : "indisponible dans ce navigateur"}.</p>
+    <div className="stack">
+      {segments.map((segment) => <section className="card stack" key={segment.id}>
+        <div className="form-grid">
+          <label className="field span">Titre<input value={segment.title} onChange={(e) => edit(segment.id, "title", e.target.value)} /></label>
+          <label className="field">IN (s)<input type="number" min="0" step="0.1" value={segment.clipIn} onChange={(e) => edit(segment.id, "clipIn", Number(e.target.value))} /></label>
+          <label className="field">OUT (s)<input type="number" min="0" step="0.1" max={duration} value={segment.clipOut} onChange={(e) => edit(segment.id, "clipOut", Number(e.target.value))} /></label>
+          <p className="field">Durée : {Math.max(0, segment.clipOut - segment.clipIn).toFixed(1)} s</p>
+          <label className="field">Type de plan<input value={segment.type} onChange={(e) => edit(segment.id, "type", e.target.value)} /></label>
+          <label className="field">Cadrage<input value={segment.framing} onChange={(e) => edit(segment.id, "framing", e.target.value)} /></label>
+          <label className="field">Mouvement<input value={segment.movement} onChange={(e) => edit(segment.id, "movement", e.target.value)} /></label>
+          <label className="field">Transition<input value={segment.transition} onChange={(e) => edit(segment.id, "transition", e.target.value)} /></label>
+          <label className="field">Sujet<input value={segment.subject} onChange={(e) => edit(segment.id, "subject", e.target.value)} /></label>
+          <label className="field">Étape<select value={segment.stageId} onChange={(e) => edit(segment.id, "stageId", e.target.value)}><option value="">Sans étape</option>{itemsOf(p, "stages").map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}</select></label>
+          <label className="field">Effet<input value={segment.effect} onChange={(e) => edit(segment.id, "effect", e.target.value)} /></label>
+          <label className="field span">Notes<textarea value={segment.notes} onChange={(e) => edit(segment.id, "notes", e.target.value)} /></label>
+        </div>
+        <div className="btn-row">
+          {segment.shotId ? <span className="muted">Plan créé et lié à ce segment</span> : <button className="btn gold" type="button" onClick={() => createShot(segment)}>Créer le plan à tourner depuis ce segment</button>}
+          <button className="btn danger" type="button" onClick={() => save(segments.filter((entry) => entry.id !== segment.id), "Segment supprimé")}>Supprimer</button>
+        </div>
+      </section>)}
+      <div className="btn-row"><button className="btn" type="button" onClick={add}><Plus size={16} /> Ajouter un segment</button><button className="btn gold" type="button" onClick={() => save(segments)}>Enregistrer le découpage</button></div>
+    </div>
+  </Sheet>;
+}
 
 /** Galerie d'inspirations : catégories, vidéos jouables d'un tap, transformation en plan. */
 export default function Inspirations() {
@@ -13,6 +76,7 @@ export default function Inspirations() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Item | null>(null);
   const [viewing, setViewing] = useState<Item | null>(null);
+  const [segmenting, setSegmenting] = useState<Item | null>(null);
   const media = useMedia(p.id);
   const all = itemsOf(p, "inspirations");
   const categories = ["Toutes", ...new Set(all.map((i) => String(i.category || "Sans catégorie")))];
@@ -64,8 +128,8 @@ export default function Inspirations() {
       {items.length ? (
         <div className="insp-grid">
           {items.map((i) => (
+            <div key={i.id} className="stack">
             <MediaCard
-              key={i.id}
               item={i}
               thumb={mediaFor(media, i)}
               subtitle={String(i.category || "")}
@@ -73,6 +137,8 @@ export default function Inspirations() {
               onView={() => setViewing(i)}
               onEdit={() => setEditing(i)}
             />
+            {mediaFor(media, i)?.type.startsWith("video/") && <button className="btn small" type="button" onClick={() => setSegmenting(i)}><Scissors size={15} /> Découper en segments</button>}
+            </div>
           ))}
         </div>
       ) : (
@@ -124,6 +190,10 @@ export default function Inspirations() {
           }
         />
       )}
+      {segmenting && (() => {
+        const source = mediaFor(media, segmenting);
+        return source ? <SegmentsEditor item={segmenting} mediaId={source.id} duration={source.duration} onClose={() => setSegmenting(null)} /> : null;
+      })()}
     </Screen>
   );
 }

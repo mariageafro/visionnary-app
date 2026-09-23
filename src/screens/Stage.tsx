@@ -24,8 +24,8 @@ import { friseMoments, stageFrise, toClock } from "../moments";
 import { runStages } from "../schedule";
 import { stageItems, stageStats } from "../stageStats";
 import { useProject } from "../store";
-import { Empty, Screen, Tabs, navigate, useMedia } from "../ui";
-import { ItemEditor, MemberAvatar, OperatorPills, QuickView, nextOrder, operatorsOf } from "./common";
+import { Empty, Screen, Sheet, Tabs, navigate, useMedia } from "../ui";
+import { AddressLinks, ItemEditor, MemberAvatar, OperatorPills, QuickView, nextOrder, operatorsOf } from "./common";
 import BulkAdd from "./BulkAdd";
 import { DropVeil, ImportProgress, ImportSheet, useFileDrop, useImporter, type ImportTarget } from "./MediaDrop";
 import MomentSplit from "./MomentSplit";
@@ -70,6 +70,7 @@ export default function Stage({ id }: { id: string }) {
   const [bulk, setBulk] = useState<{ kind: "video" | "photo" | "drone" | "both"; section: string } | null>(null);
   const [pending, setPending] = useState<{ files: File[]; target: ImportTarget } | null>(null);
   const [operator, setOperator] = useState("");
+  const [newSection, setNewSection] = useState<{ title: string; parentId: string } | null>(null);
   const media = useMedia(p.id);
   const importer = useImporter();
   const dragging = useFileDrop((files) => setPending({ files, target: importDefaults[tab] ?? "photo" }), !!stage);
@@ -87,8 +88,17 @@ export default function Stage({ id }: { id: string }) {
   const visible = (i: Item) => !operator || (operator === "unassigned" ? !i.operatorId : i.operatorId === operator);
   const shots = items.shots;
   const transitions = new Map(items.transitions.filter((t) => t.fromId).map((t) => [String(t.fromId), String(t.movement || "Transition")]));
-  const sectionChoices = orderSections([...shots.map(sectionOf), ...shotSections]);
-  const { Icon, color } = stageLook(stage.title);
+  const configuredSections = p.shotSections ?? [];
+  const sectionChoices = orderSections([...shots.map(sectionOf), ...configuredSections.map((s) => s.title), ...shotSections]);
+  const saveNewSection = () => {
+    if (!newSection?.title.trim()) return;
+    const parent = configuredSections.find((s) => s.id === newSection.parentId);
+    const title = parent ? `${parent.title} · ${newSection.title.trim()}` : newSection.title.trim();
+    if (configuredSections.some((s) => s.title === title) || sectionChoices.includes(title)) return;
+    change({ ...w, projects: w.projects.map((project) => project.id === p.id ? { ...p, shotSections: [...configuredSections, { id: crypto.randomUUID(), title, order: configuredSections.length, ...(parent ? { parentId: parent.id } : {}) }] } : project) }, `Section « ${title} » créée`);
+    setNewSection(null);
+  };
+  const { Icon, color } = stageLook(stage.title, stage);
   const venue = p.items.find((i) => i.id === stage.venueId);
   const frise = stageFrise(p, stage, shots);
   const nextMoment = friseMoments(frise).find((m) => m.shots.some((s) => !done(s) && !["sauté", "impossible"].includes(s.status)));
@@ -204,6 +214,7 @@ export default function Stage({ id }: { id: string }) {
             <span className="stage-hero-place">
               <MapPin size={14} />
               <span>{venue ? `${venue.title}${venue.address ? " · " + String(venue.address) : ""}` : "Lieu à définir"}</span>
+              {venue?.address && <AddressLinks address={String(venue.address)} />}
             </span>
           </div>
           <Ring percent={stats.percent} label={`${stats.shots.done}/${stats.shots.total}`} />
@@ -257,6 +268,7 @@ export default function Stage({ id }: { id: string }) {
 
       {tab === "frise" && (
         <>
+          <div className="stage-hero-actions"><button className="btn small" onClick={() => setNewSection({ title: "", parentId: "" })}><Plus size={15}/> Nouvelle section de plans</button></div>
           <MomentSplit shots={shots} />
           {stage.notes && <p className="stage-notes">{stage.notes}</p>}
           {shots.length ? (
@@ -399,6 +411,13 @@ export default function Stage({ id }: { id: string }) {
         />
       )}
       {viewer && <ShotViewer ids={viewer.ids} start={viewer.start} context={viewer.context} onClose={() => setViewer(null)} />}
+      {newSection && <Sheet title={newSection.parentId ? "Nouvelle sous-section" : "Nouvelle section"} onClose={() => setNewSection(null)}>
+        <div className="stack">
+          <label className="field">Nom<input autoFocus value={newSection.title} onChange={(e) => setNewSection({ ...newSection, title: e.target.value })}/></label>
+          <label className="field">Sous-section de<select value={newSection.parentId} onChange={(e) => setNewSection({ ...newSection, parentId: e.target.value })}><option value="">Aucune · section principale</option>{configuredSections.filter((s) => !s.parentId).map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
+          <div className="form-actions"><button className="btn" onClick={() => setNewSection(null)}>Annuler</button><button className="btn gold" disabled={!newSection.title.trim()} onClick={saveNewSection}>Créer</button></div>
+        </div>
+      </Sheet>}
       {editing && <ItemEditor key={editing.id} item={editing} onClose={() => setEditing(null)} />}
       {viewing && (
         <QuickView

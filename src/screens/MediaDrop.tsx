@@ -18,7 +18,7 @@ export const importTargets: [ImportTarget, string, typeof Camera][] = [
 ];
 const moduleFor: Record<ImportTarget, ModuleId> = { photo: "shots", video: "shots", pose: "poses", reference: "inspirations" };
 const nounFor: Record<ImportTarget, string> = { photo: "Photo", video: "Plan", pose: "Pose", reference: "Référence" };
-const accepted = (f: File) => /^(image|video)\//.test(f.type) || /\.(heic|heif|mov|mp4|m4v|jpe?g|png|webp|gif)$/i.test(f.name);
+export const accepted = (f: File) => /^(image|video)\//.test(f.type) || /\.(heic|heif|mov|mp4|m4v|jpe?g|png|webp|gif)$/i.test(f.name);
 
 /**
  * Glisser des fichiers n'importe où sur l'écran : renvoie `true` pendant le survol pour afficher

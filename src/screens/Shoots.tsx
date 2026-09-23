@@ -4,7 +4,7 @@ import { Clapperboard, Plus } from "lucide-react";
 import { useStore } from "../store";
 import { coverage } from "../model";
 import { Empty, Screen, Tabs, navigate } from "../ui";
-import { dayMonth, daysUntil } from "./common";
+import { CoupleAvatar, dayMonth, daysUntil } from "./common";
 import ShootWizard from "./ShootWizard";
 
 const statusDot = (status: string) =>
@@ -63,6 +63,7 @@ export default function Shoots() {
                     <b>{day}</b>
                     <small>{m}</small>
                   </span>
+                  <CoupleAvatar project={p} />
                   <span className="row-main">
                     <strong>{p.name}</strong>
                     <small>{[p.ceremony, p.venue].filter(Boolean).join(" · ") || "Lieu à définir"}</small>

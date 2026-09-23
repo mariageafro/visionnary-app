@@ -2,6 +2,26 @@ import { describe, it, expect } from "vitest";
 import { duplicateStage, framingCode, makeItem, newProject, stageTemplate } from "../src/model";
 import { parseTitles } from "../src/screens/BulkAdd";
 import { isPhotoShot, isVideoShot, shotKind, stageItems, stageStats, titleFromFile } from "../src/stageStats";
+import { stageLook } from "../src/screens/stageIcons";
+
+describe("icône et couleur d’étape personnalisées", () => {
+  it("utilise la déduction automatique par défaut", () => {
+    const auto = stageLook("Cérémonie religieuse");
+    expect(auto.color).toBe("#e59a2f");
+  });
+  it("l’icône et la couleur choisies manuellement priment sur le titre", () => {
+    const stage = makeItem("stages", "Cérémonie religieuse", { icon: "star", color: "#123456" });
+    const custom = stageLook(stage.title, stage);
+    const auto = stageLook(stage.title);
+    expect(custom.color).toBe("#123456");
+    expect(custom.Icon).not.toBe(auto.Icon);
+  });
+  it("un titre vide sans choix manuel ne casse pas la déduction", () => {
+    const stage = makeItem("stages", "Étape libre");
+    const look = stageLook(stage.title, stage);
+    expect(look.color).toBe("#8a7a5c");
+  });
+});
 
 describe("tableau de bord d’une étape", () => {
   const setup = () => {

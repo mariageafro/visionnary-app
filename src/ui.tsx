@@ -264,12 +264,13 @@ export function Thumb({ media, className = "", onClick, full = false, animate = 
       <br />
       {media.name.split(".").pop()?.toUpperCase()}
     </span>
-  ) : videoUrl ? <video src={videoUrl} muted autoPlay loop playsInline preload="metadata" aria-label={media.name} /> : url ? (
+  ) : videoUrl ? <video src={videoUrl} muted autoPlay loop playsInline preload="metadata" aria-label={media.name} draggable={false} /> : url ? (
     <>
       {/* Apparition en fondu une fois l'image décodée : pas de saut ni d'image à moitié chargée. */}
       <img
         src={url}
         alt={media.name}
+        draggable={false}
         loading="lazy"
         decoding="async"
         onLoad={(e) => e.currentTarget.classList.add("is-loaded")}
@@ -395,6 +396,7 @@ export function MediaManager({
   projectId,
   itemId,
   coverId,
+  protectedIds,
   onCover,
   onClip,
   title = "Photos, vidéos & fichiers",
@@ -402,6 +404,7 @@ export function MediaManager({
   projectId: string;
   itemId: string;
   coverId?: string;
+  protectedIds?: ReadonlySet<string>;
   onCover?: (id: string) => void;
   onClip?: (media: MediaEntry, range: { in: number; out: number }) => void;
   title?: string;
@@ -479,6 +482,7 @@ export function MediaManager({
                 {m.duration ? `${Math.round(m.duration)} s · ` : ""}
                 {formatBytes(m.size)}
               </small>
+              {protectedIds?.has(m.id) && <small>Utilisé par une autre fiche</small>}
               <div className="btn-row">
                 {onCover && m.type.startsWith("image/") && !m.unsupported && (
                   <button className="icon-btn" aria-label={"Utiliser " + m.name + " en couverture"} onClick={() => onCover(m.id)}>
@@ -488,6 +492,8 @@ export function MediaManager({
                 <button
                   className="icon-btn danger"
                   aria-label={"Supprimer " + m.name}
+                  disabled={protectedIds?.has(m.id)}
+                  title={protectedIds?.has(m.id) ? "Supprimez d’abord les fiches qui utilisent ce fichier" : undefined}
                   onClick={async () => {
                     if (!confirm(`Supprimer « ${m.name} » de cet appareil ?`)) return;
                     await deleteMedia(m.id);

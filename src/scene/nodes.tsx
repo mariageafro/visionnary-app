@@ -91,6 +91,7 @@ export const StaticNode = memo(function StaticNode({ el }: { el: SceneElement })
     return (
       <g transform={t} className="sd-node">
         {shape({ fill: color, stroke: "#0b0b0a", strokeWidth: 0.02 })}
+        {el.asset === "mur" && <line x1={-w * 0.45} y1={0} x2={w * 0.45} y2={0} stroke="#e1d5c0" strokeOpacity={0.55} strokeWidth={0.025} strokeDasharray="0.35 0.12" />}
       </g>
     );
   }
@@ -118,13 +119,33 @@ export const StaticNode = memo(function StaticNode({ el }: { el: SceneElement })
     );
   }
   // Mobilier et décor
+  const isSeat = ["chaise", "fauteuil", "canape"].includes(el.asset ?? "");
+  const isTable = ["table-ronde", "table-rect", "table-honneur", "bureau", "buffet"].includes(el.asset ?? "");
   return (
     <g transform={t} className="sd-node">
+      <ellipse cy={h * 0.07} rx={w * 0.51} ry={h * 0.52} fill="#080909" fillOpacity={0.2} />
       {shape({ fill: color, fillOpacity: 0.32, stroke: color, strokeWidth: 0.04 })}
-      {el.asset === "dj" && <Label x={0} y={0.12} text="DJ" size={0.36} />}
-      {el.asset === "voiture" && <rect x={w * 0.12} y={-h * 0.36} width={w * 0.22} height={h * 0.72} rx={0.1} fill={color} fillOpacity={0.6} />}
+      {isSeat && <>
+        <rect x={-w * 0.4} y={-h * 0.22} width={w * 0.8} height={h * 0.55} rx={Math.min(w, h) * 0.12} fill={color} fillOpacity={0.75} stroke="#181817" strokeWidth={0.025} />
+        <rect x={-w * 0.43} y={-h * 0.43} width={w * 0.86} height={h * 0.17} rx={Math.min(w, h) * 0.08} fill={color} stroke="#181817" strokeWidth={0.025} />
+        {el.asset !== "chaise" && <><rect x={-w * 0.48} y={-h * 0.22} width={w * 0.13} height={h * 0.55} rx={0.04} fill={color} stroke="#181817" strokeWidth={0.02}/><rect x={w * 0.35} y={-h * 0.22} width={w * 0.13} height={h * 0.55} rx={0.04} fill={color} stroke="#181817" strokeWidth={0.02}/></>}
+        {el.asset === "canape" && <line x1={0} y1={-h * 0.2} x2={0} y2={h * 0.3} stroke="#161615" strokeOpacity={0.55} strokeWidth={0.025} />}
+      </>}
+      {isTable && <>
+        {el.asset === "table-ronde" ? <ellipse rx={w * 0.45} ry={h * 0.45} fill={color} fillOpacity={0.75} stroke="#33291e" strokeWidth={0.035} /> : <rect x={-w * 0.45} y={-h * 0.4} width={w * 0.9} height={h * 0.8} rx={0.06} fill={color} fillOpacity={0.75} stroke="#33291e" strokeWidth={0.035} />}
+        <ellipse rx={Math.min(w, h) * 0.07} ry={Math.min(w, h) * 0.07} fill="#e8cf92" fillOpacity={0.7} />
+      </>}
+      {el.asset === "lit" && <><rect x={-w * 0.43} y={-h * 0.42} width={w * 0.86} height={h * 0.84} rx={0.09} fill="#d7c7af" fillOpacity={0.82}/><rect x={-w * 0.36} y={-h * 0.34} width={w * 0.27} height={h * 0.23} rx={0.06} fill="#f1e8dc"/><rect x={w * 0.09} y={-h * 0.34} width={w * 0.27} height={h * 0.23} rx={0.06} fill="#f1e8dc"/></>}
+      {el.asset === "dj" && <><circle cx={-w * 0.26} r={h * 0.22} fill="#20202c" stroke="#b6aaca" strokeWidth={0.028}/><circle cx={w * 0.26} r={h * 0.22} fill="#20202c" stroke="#b6aaca" strokeWidth={0.028}/><rect x={-w * 0.08} y={-h * 0.32} width={w * 0.16} height={h * 0.64} fill="#25222d" stroke="#b6aaca" strokeWidth={0.018}/></>}
+      {el.asset === "bar" && <><rect x={-w * 0.44} y={-h * 0.36} width={w * 0.88} height={h * 0.72} rx={0.05} fill={color} fillOpacity={0.75}/>{[-0.2,0,0.2].map((x)=> <circle key={x} cx={x*w} cy={0} r={h*0.09} fill="#f3ebdb" fillOpacity={0.6}/>)}</>}
+      {el.asset === "photobooth" && <><rect x={-w * 0.42} y={-h * 0.38} width={w * 0.84} height={h * 0.76} rx={0.08} fill="#302b37" stroke={color} strokeWidth={0.05}/><circle cx={0} cy={-h*0.07} r={h*0.16} fill="#8ca9ba"/><rect x={-w*0.17} y={h*0.2} width={w*0.34} height={h*0.08} rx={0.03} fill="#cfc4d5"/></>}
+      {el.asset === "rideau" && Array.from({length:8},(_,i)=><path key={i} d={`M ${-w/2+i*w/8} ${-h/2} Q ${-w/2+(i+0.6)*w/8} 0 ${-w/2+i*w/8} ${h/2}`} fill="none" stroke="#f2dfc9" strokeOpacity={0.55} strokeWidth={0.025}/>)}
+      {el.asset === "voiture" && <><rect x={-w * 0.35} y={-h * 0.34} width={w * 0.47} height={h * 0.68} rx={h * 0.14} fill="#b8c7cd" fillOpacity={0.7}/><rect x={w * 0.12} y={-h * 0.36} width={w * 0.22} height={h * 0.72} rx={0.1} fill={color} fillOpacity={0.6}/><rect x={-w * 0.28} y={-h * 0.28} width={w * 0.16} height={h * 0.56} rx={0.1} fill="#252b30" fillOpacity={0.5}/></>}
+      {el.asset === "enceinte" && <><circle cy={-h * 0.16} r={h * 0.13} fill="#171717" stroke="#888" strokeWidth={0.02}/><circle cy={h * 0.18} r={h * 0.2} fill="#171717" stroke="#888" strokeWidth={0.02}/></>}
+      {el.asset === "ecran" && <rect x={-w * 0.47} y={-h * 0.34} width={w * 0.94} height={h * 0.68} rx={0.02} fill="#78bfea" fillOpacity={0.68}/ >}
+      {el.asset === "fleurs" && Array.from({length:5},(_,i)=>{const a=i*Math.PI*2/5;return <circle key={i} cx={Math.cos(a)*w*0.2} cy={Math.sin(a)*h*0.2} r={Math.min(w,h)*0.15} fill={i%2 ? "#f0a4c0" : color} fillOpacity={0.86}/>})}
       {el.asset === "miroir" && <rect x={-w / 2} y={-h / 2} width={w} height={h} fill="#b9d7ee" fillOpacity={0.8} />}
-      {w * h > 0.9 && el.asset !== "dj" && (
+      {w * h > 0.9 && !isTable && el.asset !== "dj" && el.asset !== "lit" && el.asset !== "voiture" && (
         <g transform={`rotate(${-el.rotation})`}>
           <Label x={0} y={0.1} text={el.name} size={fontFor(w, h) * 0.75} color="#e9dfcc" weight={600} />
         </g>
@@ -165,15 +186,23 @@ export const CrowdNode = memo(function CrowdNode({ el }: { el: SceneElement }) {
 /** Une personne vue du dessus : épaules, tête, direction du regard, rôle en couleur. */
 export function PersonNode({ el, pose, operatorColor }: { el: SceneElement; pose: Pose; operatorColor?: string }) {
   const role = roleById(el.role);
-  const light = ["mariee", "enfant", "invite", "couple"].includes(role.id);
+  const clothing = el.color ?? role.color;
+  const skin = el.skinColor ?? "#d6b599";
+  const bride = el.outfit === "robe" || (!el.outfit && role.id === "mariee");
+  const suit = el.outfit === "costume" || (!el.outfit && role.id === "marie");
+  const darkClothing = /^#(?:[0-5][0-9a-f]){3}$/i.test(clothing);
   return (
     <g transform={`translate(${pose.x} ${pose.y})`} className="sd-node">
       <g transform={`rotate(${pose.rotation})`}>
-        <ellipse rx={0.19} ry={0.31} fill={role.color} stroke={operatorColor ?? "#0b0b0a"} strokeWidth={operatorColor ? 0.06 : 0.03} />
-        <circle r={0.15} fill={role.color} stroke="#0b0b0a" strokeWidth={0.025} />
-        <path d="M 0.2 -0.07 L 0.34 0 L 0.2 0.07 Z" fill={role.color} stroke="#0b0b0a" strokeWidth={0.02} />
+        <ellipse cy={0.06} rx={bride ? 0.3 : 0.23} ry={bride ? 0.34 : 0.29} fill={clothing} fillOpacity={0.91} stroke={operatorColor ?? "#0b0b0a"} strokeWidth={operatorColor ? 0.06 : 0.025} />
+        {bride && <path d="M -0.16 -0.13 Q -0.29 0.16 -0.23 0.31 Q 0 0.48 0.23 0.31 Q 0.29 0.16 0.16 -0.13" fill={clothing} stroke="#b8ac9b" strokeWidth={0.018} />}
+        {suit && <path d="M -0.12 -0.08 L 0 0.12 L 0.12 -0.08 M 0 -0.03 L 0 0.27" fill="none" stroke={darkClothing ? "#e6e0d9" : "#343032"} strokeWidth={0.028} />}
+        <path d="M -0.19 -0.1 L -0.34 0.13 M 0.19 -0.1 L 0.34 0.13" stroke={clothing} strokeWidth={0.075} strokeLinecap="round" />
+        <circle cy={-0.13} r={0.145} fill={skin} stroke="#0b0b0a" strokeWidth={0.022} />
+        <path d="M -0.13 -0.17 Q 0 -0.34 0.13 -0.17" fill="none" stroke="#3a302b" strokeWidth={0.07} strokeLinecap="round" />
+        <path d="M 0.2 -0.07 L 0.34 0 L 0.2 0.07 Z" fill={clothing} stroke="#0b0b0a" strokeWidth={0.02} />
       </g>
-      <text y={0.07} fontSize={0.17} fontWeight={800} textAnchor="middle" fill={light ? "#1b1a17" : "#fff"} className="sd-label">
+      <text y={0.07} fontSize={0.17} fontWeight={800} textAnchor="middle" fill={darkClothing ? "#fff" : "#1b1a17"} className="sd-label">
         {role.mark}
       </text>
       <Label x={0} y={0.62} text={el.name} size={0.26} />
@@ -217,8 +246,16 @@ export function CameraNode({ el, pose, operatorColor }: { el: SceneElement; pose
   return (
     <g transform={`translate(${pose.x} ${pose.y})`} className="sd-node">
       <g transform={`rotate(${pose.rotation})`}>
+        {el.support === "trepied" || el.support === "fixe" ? <g stroke={color} strokeWidth={0.038} strokeLinecap="round" opacity={0.88}><path d="M -0.1 0.05 L -0.37 0.36 M -0.1 0.05 L 0.13 0.36 M -0.1 0.05 L -0.1 -0.38"/><circle cx={-0.1} cy={0.05} r={0.045} fill={color}/></g> : null}
+        {el.support === "gimbal" && <path d="M -0.28 -0.28 Q -0.47 0 -0.28 0.28 M -0.28 0.28 L -0.17 0.34" fill="none" stroke={color} strokeWidth={0.055} strokeLinecap="round" />}
         <rect x={-0.34} y={-0.2} width={0.46} height={0.4} rx={0.07} fill="#1b1a17" stroke={operatorColor ?? color} strokeWidth={0.07} />
+        <circle cx={-0.12} r={0.105} fill="#101a20" stroke="#9ca9a7" strokeWidth={0.025} />
+        <rect x={-0.25} y={-0.28} width={0.21} height={0.07} rx={0.025} fill="#363c3e" />
         <path d="M 0.12 -0.11 L 0.36 -0.19 L 0.36 0.19 L 0.12 0.11 Z" fill={color} />
+        {(el.operatorPresent ?? el.support !== "fixe") && <g transform="translate(-0.64 0)" fill="none" stroke={operatorColor ?? color} strokeWidth={0.055} strokeLinecap="round" pointerEvents="none">
+          <circle cy={-0.16} r={0.11} fill={operatorColor ?? color} stroke="none" />
+          <path d="M 0 -0.02 V 0.23 M -0.13 0.08 L 0.13 0.08 M 0 0.23 L -0.12 0.36 M 0 0.23 L 0.12 0.36" />
+        </g>}
         {pose.tilt ? <path d={`M -0.1 0 L -0.1 ${-0.45 * pose.tilt}`} stroke={color} strokeWidth={0.05} markerEnd="url(#sd-arrow)" /> : null}
       </g>
       <Label x={0} y={-0.42} text={(el.tag ?? el.name).replace("CAM ", "")} size={0.3} color={color} />
@@ -256,7 +293,7 @@ export function LightNode({ el, pose, selected }: { el: SceneElement; pose: Pose
   const def = lightById(el.asset);
   const beam = el.beam ?? def.beam;
   const reach = el.reach ?? def.reach;
-  const power = (el.power ?? 80) / 100;
+  const power = el.lightOn === false ? 0 : (el.power ?? 80) / 100;
   const color = def.subtractive ? "#000000" : kelvinColor(el.temperature);
   const a = rad(pose.rotation);
   const half = rad(Math.min(359, beam) / 2);
@@ -272,15 +309,22 @@ export function LightNode({ el, pose, selected }: { el: SceneElement; pose: Pose
           <stop offset="1" stopColor={color} stopOpacity={0} />
         </radialGradient>
       </defs>
-      <path d={cone} fill={`url(#${id})`} stroke={def.subtractive ? "#555" : color} strokeOpacity={selected ? 0.6 : 0.2} strokeWidth={0.03} pointerEvents="none" className="sd-cone" />
+      <path d={cone} fill={`url(#${id})`} stroke={el.lightOn === false ? "#666" : def.subtractive ? "#555" : color} strokeOpacity={el.lightOn === false ? 0.08 : selected ? 0.6 : 0.2} strokeWidth={0.03} pointerEvents="none" className="sd-cone" />
       <g transform={`translate(${pose.x} ${pose.y})`} className="sd-node">
         <g transform={`rotate(${pose.rotation})`}>
           {el.asset === "fenetre" || el.asset === "naturelle" ? (
             <circle r={0.26} fill={color} stroke="#0b0b0a" strokeWidth={0.03} />
+          ) : el.asset === "softbox" ? (
+            <>
+              <path d="M -0.32 -0.23 L -0.08 -0.32 L 0.17 -0.24 L 0.3 -0.06 L 0.3 0.16 L 0.06 0.3 L -0.18 0.25 L -0.32 0.05 Z" fill="#f4f0e7" stroke="#2e302d" strokeWidth={0.045} />
+              <path d="M -0.05 0.25 L -0.3 0.48 M -0.05 0.25 L 0.2 0.48 M -0.05 0.25 L -0.05 -0.43" stroke="#b7a98e" strokeWidth={0.035} strokeLinecap="round" />
+              <circle cx={-0.02} cy={-0.01} r={0.12} fill={color} fillOpacity={0.75} />
+            </>
           ) : (
             <>
               <rect x={-0.24} y={-0.22} width={0.3} height={0.44} rx={0.05} fill="#1b1a17" stroke={color} strokeWidth={0.05} />
               <rect x={0.06} y={-0.22} width={0.08} height={0.44} fill={def.subtractive ? "#333" : color} />
+              <path d="M -0.1 0.2 L -0.28 0.38 M -0.1 0.2 L 0.08 0.38 M -0.1 0.2 L -0.1 -0.37" fill="none" stroke="#ad9f7e" strokeWidth={0.03} strokeLinecap="round" />
             </>
           )}
         </g>

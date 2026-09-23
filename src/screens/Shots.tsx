@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Camera, Check, Clapperboard, Film, ListPlus, Plane, Plus, Search, Sparkles, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
+import { useState, type DragEvent } from "react";
+import { Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
+import type { ShotSection } from "../types";
 import { done, makeItem, orderSections, sectionOf, shotSections } from "../model";
 import { isDroneShot, isPhotoShot, isVideoShot } from "../stageStats";
 import { withOrder } from "../features";
@@ -9,13 +10,16 @@ import { useProject } from "../store";
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
 import { matchesShotSearch } from "../shotSearch";
+import { orderedSectionTitles, reorderShotSection, siblingSectionTitles } from "../shotSections";
 import "./shots.css";
 import BulkAdd from "./BulkAdd";
-import { DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter, type ImportTarget } from "./MediaDrop";
+import { accepted as acceptedImportFile, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter, type ImportTarget } from "./MediaDrop";
 import MomentSplit from "./MomentSplit";
 import ShotViewer from "./ShotViewer";
 
 type Kind = "all" | "video" | "photo" | "drone";
+const shotDragType = "application/x-visionnary-shot";
+const sectionDragType = "application/x-visionnary-section";
 const kindTest: Record<Kind, (i: Item) => boolean> = { all: () => true, video: isVideoShot, photo: isPhotoShot, drone: isDroneShot };
 
 /**
@@ -23,8 +27,8 @@ const kindTest: Record<Kind, (i: Item) => boolean> = { all: () => true, video: i
  * on ouvre l'écran et on sait exactement quoi tourner, dans quel ordre, sans se perdre.
  */
 export default function Shots() {
-  const { project: p, update } = useProject();
-  const [filter, setFilter] = useState<"all" | "todo" | "must" | "done">("all");
+  const { project: p, update, patchItem, notify } = useProject();
+  const [filter, setFilter] = useState<"all" | "todo" | "must" | "done" | "favorites">("all");
   const [kind, setKind] = useState<Kind>("all");
   const [motion, setMotion] = useState(false);
   const [query, setQuery] = useState("");
@@ -34,7 +38,11 @@ export default function Shots() {
   const [viewer, setViewer] = useState<{ ids: string[]; start: number } | null>(null);
   const [confirmLoad, setConfirmLoad] = useState(false);
   const [bulk, setBulk] = useState(false);
-  const [pending, setPending] = useState<{ files: File[]; target: ImportTarget } | null>(null);
+  const [pending, setPending] = useState<{ files: File[]; target: ImportTarget; section?: string } | null>(null);
+  const [sectionEditor, setSectionEditor] = useState<{ title: string; parentId?: string; original?: ShotSection } | null>(null);
+  const [sectionActions, setSectionActions] = useState<string | null>(null);
+  const [showHiddenSections, setShowHiddenSections] = useState(false);
+  const [dragTarget, setDragTarget] = useState<string | null>(null);
   const media = useMedia(p.id);
   const importer = useImporter();
   const dragging = useFileDrop((files) => setPending({ files, target: kind === "video" || kind === "drone" ? "video" : "photo" }));
@@ -53,9 +61,19 @@ export default function Shots() {
     todo: (i: Item) => !done(i),
     must: (i: Item) => i.priority === "MUST HAVE",
     done,
+    favorites: (i: Item) => i.favorite === true,
   };
+  const configured = p.shotSections ?? [];
+  const hiddenIds = new Set(configured.filter((section) => section.hidden).map((section) => section.id));
+  const sectionHidden = (section: ShotSection) => !!section.hidden || !!(section.parentId && hiddenIds.has(section.parentId));
+  const hiddenTitles = new Set(configured.filter(sectionHidden).map((section) => section.title));
   const items = typed.filter(statusTests[filter]);
-  const orderedSections = orderSections(items.map(sectionOf));
+  const visibleItems = items.filter((i) => showHiddenSections || !hiddenTitles.has(sectionOf(i)));
+  const sectionTitles = (parentId?: string) => configured.filter((s) => s.parentId === parentId && !s.hidden).sort((a,b) => a.order-b.order);
+  const orderedSections = orderedSectionTitles(
+    configured.filter((section) => !sectionHidden(section) || showHiddenSections),
+    orderSections(visibleItems.map(sectionOf)),
+  );
   const filtered = !!(query || stageId || operatorId || kind !== "all" || filter !== "all");
   const resetFilters = () => { setQuery(""); setStageId(""); setOperatorId(""); setKind("all"); setFilter("all"); };
   // Ordre de lecture de l'écran (chapitre par chapitre) : la fiche plein écran le suit.
@@ -77,6 +95,103 @@ export default function Shots() {
       `${shotListCount} plans ajoutés, prêts à tourner`,
     );
     setConfirmLoad(false);
+  };
+  const saveSection = () => {
+    if (!sectionEditor) return;
+    const title = sectionEditor.title.trim();
+    if (!title) return;
+    const sections = [...configured];
+    const existing = sectionEditor.original;
+    if (existing) {
+      const oldTitle = existing.title;
+      if (sections.some((s) => s.title === title && s.id !== existing.id)) return;
+      const at = sections.findIndex((s) => s.id === existing.id);
+      if (at >= 0) sections[at] = { ...existing, title };
+      else sections.push({ ...existing, title });
+      const children = configured.filter((s) => s.parentId === existing.id);
+      for (const child of children) {
+        const suffix = child.title.startsWith(oldTitle + " · ") ? child.title.slice(oldTitle.length + 3) : child.title;
+        const renamedChild = `${title} · ${suffix}`;
+        const childIndex = sections.findIndex((s) => s.id === child.id);
+        if (childIndex >= 0) sections[childIndex] = { ...child, title: renamedChild };
+      }
+      const sectionNames = new Map(children.map((child) => [child.title, `${title} · ${child.title.startsWith(oldTitle + " · ") ? child.title.slice(oldTitle.length + 3) : child.title}`]));
+      update({ ...p, shotSections: sections, items: oldTitle === title ? p.items : p.items.map((i) => i.module === "shots" ? { ...i, section: sectionNames.get(sectionOf(i)) ?? (sectionOf(i) === oldTitle ? title : i.section) } : i) }, `Section « ${oldTitle} » renommée`);
+    } else {
+      let parent = sectionEditor.parentId ? sections.find((s) => s.id === sectionEditor.parentId || s.title === sectionEditor.parentId) : undefined;
+      if (sectionEditor.parentId && !parent) {
+        parent = { id: crypto.randomUUID(), title: sectionEditor.parentId, order: orderedSections.indexOf(sectionEditor.parentId) };
+        sections.push(parent);
+      }
+      const fullTitle = parent ? `${parent.title} · ${title}` : title;
+      if (sections.some((s) => s.title === fullTitle)) return;
+      const entry = { id: crypto.randomUUID(), title: fullTitle, order: sectionTitles(sectionEditor.parentId).length, ...(parent ? { parentId: parent.id } : {}) };
+      sections.push(entry);
+      update({ ...p, shotSections: sections }, `Section « ${fullTitle} » créée`);
+    }
+    setSectionEditor(null);
+  };
+  const moveSectionTo = (section: string, destination: string) => {
+    if (section === destination) return;
+    const sections = reorderShotSection(configured, orderSections(active.map(sectionOf)), section, destination);
+    if (sections) update({ ...p, shotSections: sections }, "Ordre des sections modifié");
+    else notify("Déplacez une sous-section parmi celles du même chapitre");
+  };
+  const moveSection = (section: string, delta: number) => {
+    const siblings = siblingSectionTitles(configured, orderSections(active.map(sectionOf)), section);
+    const index = siblings.indexOf(section);
+    const destination = siblings[index + delta];
+    if (destination) moveSectionTo(section, destination);
+  };
+  const isInternalDrag = (event: DragEvent<HTMLElement>) => Array.from(event.dataTransfer.types).some((type) => type === shotDragType || type === sectionDragType);
+  const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragTarget(null);
+    if (Array.from(event.dataTransfer.types).includes("Files")) {
+      const files = Array.from(event.dataTransfer.files).filter(acceptedImportFile);
+      if (files.length) setPending({ files, target: kind === "video" || kind === "drone" ? "video" : "photo", section });
+      else notify("Aucune photo ou vidéo compatible dans ce dépôt");
+      return;
+    }
+    const shotId = event.dataTransfer.getData(shotDragType);
+    if (shotId) {
+      const shot = all.find((item) => item.id === shotId);
+      if (shot && sectionOf(shot) !== section) patchItem(shotId, { section }, `Plan déplacé vers « ${section} »`);
+      return;
+    }
+    const source = event.dataTransfer.getData(sectionDragType);
+    if (source) moveSectionTo(source, section);
+  };
+  const deleteSection = (section: string) => {
+    const parent = configured.find((entry) => entry.title === section);
+    const children = parent ? configured.filter((s) => s.parentId === parent.id) : [];
+    const removedTitles = new Set([section, ...children.map((s) => s.title)]);
+    const count = p.items.filter((i) => i.module === "shots" && removedTitles.has(sectionOf(i))).length;
+    if (!window.confirm(`Supprimer la section « ${section} » ? ${count ? `${count} plan(s) seront conservés dans « Autres plans ».` : ""}`)) return;
+    update({ ...p, shotSections: configured.filter((s) => !removedTitles.has(s.title)), items: p.items.map((i) => i.module === "shots" && removedTitles.has(sectionOf(i)) ? { ...i, section: "" } : i) }, `Section « ${section} » supprimée; plans conservés`);
+  };
+  const duplicateSection = (section: string) => {
+    let title = `${section} (copie)`;
+    let copyNumber = 2;
+    while (configured.some((entry) => entry.title === title) || all.some((item) => sectionOf(item) === title)) {
+      title = `${section} (copie ${copyNumber++})`;
+    }
+    const parent = configured.find((entry) => entry.title === section);
+    const children = parent ? configured.filter((entry) => entry.parentId === parent.id) : [];
+    const parentId = crypto.randomUUID();
+    const childCopies = children.map((child) => ({ ...child, id: crypto.randomUUID(), parentId, title: `${title} · ${child.title.split(" · ").at(-1)}` }));
+    const copies = p.items.filter((i) => i.module === "shots" && (sectionOf(i) === section || children.some((child) => sectionOf(i) === child.title))).map((i, index) => {
+      const childIndex = children.findIndex((child) => child.title === sectionOf(i));
+      return { ...i, id: crypto.randomUUID(), title: `${i.title} (copie)`, section: childIndex >= 0 ? childCopies[childIndex].title : title, sourceMediaId: i.sourceMediaId || mediaFor(media, i)?.id, status: "prévu", order: nextOrder(p, "shots") + index };
+    });
+    update({ ...p, shotSections: [...configured, { id: parentId, title, order: configured.length, ...(parent?.parentId ? { parentId: parent.parentId } : {}) }, ...childCopies], items: [...p.items, ...copies] }, `Section « ${section} » dupliquée avec ses plans`);
+  };
+  const toggleCollapsed = (section: string) => {
+    const sections = [...configured]; const found = sections.find((s) => s.title === section);
+    if (found) sections[sections.indexOf(found)] = { ...found, collapsed: !found.collapsed };
+    else sections.push({ id: crypto.randomUUID(), title: section, order: orderedSections.indexOf(section), collapsed: true });
+    update({ ...p, shotSections: sections });
   };
   return (
     <Screen
@@ -162,6 +277,7 @@ export default function Shots() {
           ["all", "Tous", typed.length],
           ["todo", "À faire", typed.filter(statusTests.todo).length],
           ["must", "Essentiels", typed.filter(statusTests.must).length],
+          ["favorites", "Favoris", typed.filter(statusTests.favorites).length],
           ["done", "Faits", typed.filter(done).length],
         ]}
       />
@@ -190,36 +306,71 @@ export default function Shots() {
       </div>
       <div className="shot-results">
         <span role="status">{items.length} plan{items.length > 1 ? "s" : ""} affiché{items.length > 1 ? "s" : ""} sur {active.length}</span>
+        <button className="btn small" onClick={() => setSectionEditor({ title: "" })}><Plus size={15} /> Section</button>
         {filtered && <button className="btn small" onClick={resetFilters}><RotateCcw size={14} /> Tout afficher</button>}
       </div>
 
-      {items.length ? (
+      {items.length || (!filtered && configured.some((section) => !sectionHidden(section) || showHiddenSections)) ? (
         orderedSections.map((section) => {
           const list = items.filter((i) => sectionOf(i) === section);
-          if (!list.length) return null;
+          const sectionConfig = configured.find((s) => s.title === section);
+          if (!list.length && !sectionConfig) return null;
           return (
-            <section key={section}>
+            <section
+              key={section}
+              className={"shot-section-drop" + (dragTarget === section ? " is-drop-target" : "")}
+              onDragOver={(event) => { if (isInternalDrag(event) || Array.from(event.dataTransfer.types).includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = isInternalDrag(event) ? "move" : "copy"; setDragTarget(section); } }}
+              onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(null); }}
+              onDrop={(event) => dropOnSection(event, section)}
+            >
               <div className="section-title">
-                {section}
+                <span className="shot-section-grip" draggable title={"Glisser pour réordonner « " + section + " »"} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(sectionDragType, section); }} onDragEnd={() => setDragTarget(null)}><GripVertical size={16} /></span>
+                <button className="icon-btn small" aria-label={`${sectionConfig?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => toggleCollapsed(section)}>{sectionConfig?.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button>
+                <span>{section}</span>
                 <span>
                   {list.filter(done).length}/{list.length}
                 </span>
+                <div className="section-tools">
+                  <button className="icon-btn small" aria-label={`Ajouter une sous-section à ${section}`} title="Ajouter une sous-section" onClick={() => setSectionEditor({ title: "", parentId: sectionConfig?.id ?? section })}><Plus size={14} /></button>
+                  <button className="icon-btn small" aria-label={`Renommer ${section}`} onClick={() => setSectionEditor({ title: section, original: sectionConfig ?? { id: crypto.randomUUID(), title: section, order: orderedSections.indexOf(section) } })}><Pencil size={14} /></button>
+                  <button className="icon-btn small" aria-label={`Dupliquer ${section}`} onClick={() => duplicateSection(section)}><Copy size={14} /></button>
+                  <button className="icon-btn small" aria-label={`Monter ${section}`} onClick={() => moveSection(section, -1)}>↑</button>
+                  <button className="icon-btn small" aria-label={`Descendre ${section}`} onClick={() => moveSection(section, 1)}>↓</button>
+                  <button className="btn small" onClick={() => update({ ...p, shotSections: sectionConfig ? configured.map((s) => s.id === sectionConfig.id ? { ...s, hidden: true } : s) : [...configured, { id: crypto.randomUUID(), title: section, order: orderedSections.indexOf(section), hidden: true }] }, `Section « ${section} » masquée`)}>Masquer</button>
+                  <button className="icon-btn small" aria-label={`Supprimer ${section}`} onClick={() => deleteSection(section)}><Trash2 size={14} /></button>
+                </div>
               </div>
-              <div className="insp-grid">
+              <div className="section-tools">
+                <button className="btn small" onClick={() => setEditing(makeItem("shots", "", { section, order: nextOrder(p, "shots"), ...(kind !== "all" ? { media: kind } : {}) }))}><Plus size={14} /> Plan</button>
+                <button className="btn small" onClick={() => setSectionActions(section)}><Plus size={14} /> Autre élément</button>
+                <PickFiles className="btn small" label="Photo / vidéo" onFiles={(files) => setPending({ files, target: kind === "video" || kind === "drone" ? "video" : "photo", section })} />
+                {(sectionConfig ? sectionTitles(sectionConfig.id) : []).map((child) => <button
+                  className={"btn small" + (dragTarget === child.title ? " is-drop-target" : "")}
+                  key={child.id}
+                  onClick={() => setSectionActions(child.title)}
+                  onDragOver={(event) => { if (Array.from(event.dataTransfer.types).includes(shotDragType)) { event.preventDefault(); event.stopPropagation(); setDragTarget(child.title); } }}
+                  onDrop={(event) => dropOnSection(event, child.title)}
+                ><Plus size={14} /> {child.title.split(" · ").at(-1)}</button>)}
+              </div>
+              {!sectionConfig?.collapsed && <div className="insp-grid">
                 {list.map((i) => (
+                  <div key={i.id} className="shot-draggable">
+                  <span className="shot-card-grip" draggable title={`Glisser « ${i.title} » vers une section`} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(shotDragType, i.id); }} onDragEnd={() => setDragTarget(null)}><GripVertical size={13} /> Déplacer</span>
                   <MediaCard
-                    key={i.id}
                     item={i}
                     animate={motion}
                     thumb={mediaFor(media, i)}
                     icon={<Clapperboard size={26} />}
                     operator={operators.get(String(i.operatorId))}
                     transition={transitions.get(i.id)}
+                    onFavorite={() => patchItem(i.id, { favorite: i.favorite !== true })}
                     onView={() => setViewer({ ids: order.map((x) => x.id), start: Math.max(0, order.findIndex((x) => x.id === i.id)) })}
                     onEdit={() => setEditing(i)}
                   />
+                  </div>
                 ))}
-              </div>
+              </div>}
+              {!sectionConfig?.collapsed && !list.length && <p className="muted shot-section-empty">Aucun plan pour le moment · déposez ici un plan existant ou ajoutez-en un.</p>}
             </section>
           );
         })
@@ -255,7 +406,14 @@ export default function Shots() {
       )}
 
       {viewer && <ShotViewer ids={viewer.ids} start={viewer.start} context="Plans & scènes" onClose={() => setViewer(null)} />}
-      {bulk && <BulkAdd sections={orderSections([...all.map(sectionOf), ...shotSections])} kind={kind === "all" ? "video" : kind} onClose={() => setBulk(false)} />}
+      {configured.some((s) => s.hidden) && <details className="card" style={{ marginTop: 14 }}>
+        <summary>Sections masquées ({configured.filter((s) => s.hidden).length})</summary>
+        <div className="stack" style={{ marginTop: 10 }}>
+          {configured.filter((s) => s.hidden).map((section) => <div className="row" key={section.id}><span>{section.title}</span><button className="btn small" onClick={() => update({ ...p, shotSections: configured.map((s) => s.id === section.id ? { ...s, hidden: false } : s) }, `Section « ${section.title} » réaffichée`)}>Réafficher</button></div>)}
+          <button className="btn small" onClick={() => setShowHiddenSections((value) => !value)}>{showHiddenSections ? "Masquer temporairement le contenu" : "Afficher le contenu masqué"}</button>
+        </div>
+      </details>}
+      {bulk && <BulkAdd sections={orderSections([...all.map(sectionOf), ...(p.shotSections ?? []).map((s) => s.title), ...shotSections])} kind={kind === "all" ? "video" : kind} onClose={() => setBulk(false)} />}
       <DropVeil show={dragging} text="Chaque fichier devient un plan illustré." />
       <ImportProgress jobs={importer.jobs} />
       {pending && (
@@ -263,16 +421,37 @@ export default function Shots() {
           files={pending.files}
           target={pending.target}
           targets={["photo", "video", "reference"]}
-          sections={orderSections([...all.map(sectionOf), ...shotSections])}
+          sections={orderSections([...all.map(sectionOf), ...(p.shotSections ?? []).map((s) => s.title), ...shotSections])}
+          section={pending.section}
+          category={pending.section}
+          categories={orderSections([...all.map(sectionOf), ...(p.shotSections ?? []).map((s) => s.title), ...shotSections])}
           onClose={() => setPending(null)}
-          onConfirm={(target, section) => {
+          onConfirm={(target, section, category) => {
             const existing = target === "reference" ? itemsOf(p, "inspirations").length : active.filter((s) => (s.media ?? "") === target).length;
-            void importer.run(pending.files, target, target !== "reference" && section ? { section } : {}, existing);
+            void importer.run(pending.files, target, target === "reference" ? { ...(category || section ? { category: category || section, section: section || category } : {}) } : section ? { section } : {}, existing);
             setPending(null);
           }}
         />
       )}
       {editing && <ItemEditor item={editing} onClose={() => setEditing(null)} />}
+      {sectionActions && <Sheet title={`Ajouter dans « ${sectionActions} »`} onClose={() => setSectionActions(null)}>
+        <div className="stack">
+          <button className="btn" onClick={() => { setEditing(makeItem("shots", "", { section: sectionActions, order: nextOrder(p, "shots"), ...(kind !== "all" ? { media: kind } : {}) })); setSectionActions(null); }}>Plan</button>
+          <button className="btn" onClick={() => { setEditing(makeItem("shots", "", { section: sectionActions, bRoll: "oui", order: nextOrder(p, "shots") })); setSectionActions(null); }}>Plan B-roll</button>
+          <PickFiles label="Photo / vidéo" onFiles={(files) => { setPending({ files, target: kind === "video" || kind === "drone" ? "video" : "photo", section: sectionActions }); setSectionActions(null); }} />
+          {([
+            ["poses", "Pose photo", { section: sectionActions, category: sectionActions }],
+            ["inspirations", "Référence photo / vidéo", { section: sectionActions, category: sectionActions }],
+            ["notes", "Note", { section: sectionActions, category: sectionActions }],
+            ["checklists", "Checklist", { section: sectionActions, category: sectionActions, phase: "jourj" }],
+            ["reminders", "Rappel", { section: sectionActions, trigger: "before-start", offset: 15, priority: "IMPORTANT" }],
+          ] as const).map(([module, label, values]) => <button className="btn" key={module} onClick={() => { setSectionActions(null); setEditing(makeItem(module, "", { ...values, order: nextOrder(p, module) })); }}>{label}</button>)}
+        </div>
+      </Sheet>}
+      {sectionEditor && <Sheet title={sectionEditor.original ? "Renommer la section" : sectionEditor.parentId ? "Nouvelle sous-section" : "Nouvelle section"} onClose={() => setSectionEditor(null)}>
+        <label className="field">Nom<input autoFocus value={sectionEditor.title} onChange={(e) => setSectionEditor({ ...sectionEditor, title: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") saveSection(); }} /></label>
+        <div className="form-actions"><button className="btn" onClick={() => setSectionEditor(null)}>Annuler</button><button className="btn gold" onClick={saveSection}>Enregistrer</button></div>
+      </Sheet>}
     </Screen>
   );
 }

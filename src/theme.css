@@ -54,6 +54,29 @@
   --tap: 56px;
   font-size: 17px;
 }
+/* Thème clair « confort » : préférence de couleurs à part du mode (Studio/Terrain/Nuit restent des
+   contextes de tournage ; ce thème choisit juste plus blanc, sur n'importe lequel des trois).
+   Contrairement à Terrain (qui garde un cadre sombre et n'éclaircit que les cartes), ici tout
+   s'éclaircit — donc l'or doit rester assez foncé pour rester lisible en texte sur ces surfaces
+   claires (même logique que --gold-card, déjà éprouvée pour Terrain). */
+:root[data-theme="clair"] {
+  --bg: #f6f3ec;
+  --bg-2: #ffffff;
+  --bg-3: #efe9d9;
+  --line-dark: #ddd4bd;
+  --text: #201a0f;
+  --text-2: #6b6252;
+  --ivory: #ffffff;
+  --ivory-2: #f3eddc;
+  --line: #e2d8bf;
+  --ink: #201a0f;
+  --ink-2: #6b6252;
+  --gold: #92650f;
+  --gold-2: #7a5410;
+  --gold-ink: #fff8ec;
+  --gold-card: #7a5410;
+  color-scheme: light;
+}
 /* Nuit : discret pendant une cérémonie ou une soirée, aucune surface claire. */
 :root[data-mode="night"] {
   --bg: #050505;
@@ -329,14 +352,25 @@ video {
     margin: 0 10px 18px;
   }
   .side-shoot {
-    display: grid;
-    gap: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 10px;
-    padding: 12px;
+    padding: 10px 12px;
     border-radius: 12px;
     background: var(--bg-3);
     border: 1px solid var(--line-dark);
     text-align: left;
+  }
+  .side-shoot span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .side-shoot strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .side-shoot small {
     color: var(--text-2);
@@ -888,6 +922,38 @@ a.row:hover {
   font-size: 12px;
   opacity: 0.7;
 }
+.address-links {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+.address-links .btn.small {
+  padding: 0 10px;
+  min-height: 30px;
+}
+.icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.icon-swatch,
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--ivory-2);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-swatch.on,
+.color-swatch.on {
+  border-color: var(--gold-2);
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
 .kind-choices {
   margin-bottom: 12px;
 }
@@ -1228,6 +1294,18 @@ a.row:hover {
   color: #fff;
   backdrop-filter: blur(3px);
 }
+.insp-favorite-button {
+  position: absolute;
+  top: 6px;
+  right: 44px;
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  background: #000000b3;
+  color: var(--gold-2);
+  backdrop-filter: blur(3px);
+}
+.insp-favorite-button[aria-pressed="true"] { color: var(--gold-2); }
 /* Plan tourné ou sauté : l'image s'efface, le badge d'état reste bien lisible. */
 .insp-card.is-done .insp-thumb,
 .insp-card.is-done .insp-empty {

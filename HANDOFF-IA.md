@@ -77,12 +77,17 @@ Doit être vert avant *et* après toute modification. Le build doit afficher `di
   publique soit aussi illustrée : soit exporter ces médias et les committer dans
   `public/demo-wedding-2/` en les rattachant à `features.ts`, soit reconstruire l'import côté
   `weddingDemo.ts` pour la démo par défaut aussi.
-- Galerie photographe : pas encore organisée par étape de la journée (seulement par catégorie de
-  personne). Pas de vue tableau des comptes par mission.
-- Visionneuse plein écran : le bouton « cacher les infos » existe sur les poses
-  (`PoseBoard.tsx`), pas encore sur les plans (`ShotViewer.tsx`) ni les caméras (`CameraCard.tsx`).
-- Scène : pas de caméra drone activable/désactivable dédiée, pas de caméra réactions du public
-  distincte sur la cérémonie de démonstration.
+- Galerie photographe : catégories détaillées, filtre par étape, favoris et essentiels photo distincts,
+  consignes éditables. Les références sont groupées par catégorie dans l'étape choisie ; pas encore
+  de tableau des comptes par mission ni d'affectation de plusieurs photographes à une même pose.
+- Visionneuse plein écran : le bouton « cacher les infos » existe maintenant partout — poses
+  (`PoseBoard.tsx`), plans (`ShotViewer.tsx`) et caméras (`CameraCard.tsx`), depuis le 22/09/2026.
+- Scène : bibliothèque avec caméra réactions public et caméra live, fonds photo entiers et
+  modèle 3D GLB/OBJ local ; pas de caméra drone activable/désactivable dédiée et la cérémonie de
+  démonstration n'a pas encore été reconfigurée avec une caméra réactions du public. Un template dédié existe désormais pour la mairie
+  (`src/scene/templates.ts`, `id: "mairie"`) en plus de l'église et du flashmob ; la vignette de
+  référence épinglée n'est affichée que dans l'inspecteur/la fiche caméra, pas encore directement
+  sur l'élément caméra dans la toile (`SceneCanvas.tsx`).
 - Application bureau « vraie » (Electron/Tauri) : non construite. Le choix fait avec l'utilisateur
   (22/09/2026) a été la PWA installable, plus légère et déjà fonctionnelle. Si on packages un jour
   une vraie app native, repartir de `vite.config.ts` (base) et `public/sw.js` (chemins relatifs).

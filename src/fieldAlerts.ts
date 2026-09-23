@@ -3,11 +3,11 @@ import { minutesOf, runStages } from './schedule';
 import { stageFrise, friseMoments, momentState } from './moments';
 import { firingReminders } from './reminders';
 import { departureISO, travelLegs } from './travel';
-export interface FieldAlert {id:string;due:number;title:string;stageId?:string}
+export interface FieldAlert {id:string;due:number;title:string;stageId?:string;priority?:string}
 /** Fenêtre courte au retour d'un onglet ; seuls les rappels encore pertinents sont proposés. */
 export function fieldAlerts(p:Project,now:number):FieldAlert[]{
  if(!p.alerts?.enabled)return [];
- const alerts:FieldAlert[]=firingReminders(p,now,60000).map(r=>({id:`reminder:${r.item.id}:${r.due}`,due:r.due!,title:r.item.title,stageId:String(r.item.stageId||'')}));
+ const alerts:FieldAlert[]=firingReminders(p,now,60000).map(r=>({id:`reminder:${r.item.id}:${r.due}`,due:r.due!,title:r.item.title,stageId:String(r.item.stageId||''),priority:String(r.item.priority||'INFORMATION')}));
  const thresholds=[...new Set([...p.alerts.thresholds,0])].filter(t=>Number.isFinite(t)&&t>=0&&t<=120);
  const add=(id:string,title:string,end:number,stageId:string)=>{for(const t of thresholds){const due=end-t*60000;if(due<=now&&due>now-60000)alerts.push({id:`${p.id}:${id}:${end}:${t}`,due,title:t?`${title} : il reste ${t} min`:title+' : maintenant',stageId});}};
  for(const run of runStages(p)){

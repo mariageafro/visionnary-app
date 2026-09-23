@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { StoreProvider, useStore } from "./store";
 import { navigate, Screen } from "./ui";
+import { CoupleAvatar } from "./screens/common";
 import TravelPlanner from "./screens/TravelPlanner";
 import MissionBoard from "./screens/MissionBoard";
 import Home from "./screens/Home";
@@ -47,6 +48,7 @@ import PoseBoard from "./screens/PoseBoard";
 import ScenesList from "./scene/ScenesList";
 import SceneDesigner from "./scene/SceneDesigner";
 import Coverage from "./screens/Coverage";
+import Sde from "./screens/Sde";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
@@ -87,6 +89,28 @@ function useMode() {
   return [mode, setMode] as const;
 }
 
+// Thème clair « confort » : préférence de couleurs indépendante du mode (Studio/Terrain/Nuit
+// restent des contextes de tournage ; le thème choisit juste sombre ou clair par-dessus).
+export type Theme = "sombre" | "clair";
+function useTheme() {
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return (localStorage.getItem("visionnary-theme") as Theme) || "sombre";
+    } catch {
+      return "sombre";
+    }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("visionnary-theme", theme);
+    } catch {
+      /* préférence non mémorisée */
+    }
+  }, [theme]);
+  return [theme, setTheme] as const;
+}
+
 const bottom = [
   ["/accueil", "Accueil", HomeIcon],
   ["/tournages", "Tournages", Clapperboard],
@@ -116,6 +140,7 @@ function Shell() {
   const store = useStore();
   const route = useRoute();
   const [mode, setMode] = useMode();
+  const [theme, setTheme] = useTheme();
   const { w, project, toast, undo, redo, notify } = store;
 
   // ⌘Z / Ctrl+Z annule, ⇧⌘Z / Ctrl+Y rétablit — sauf pendant une saisie (le champ garde son propre historique).
@@ -172,7 +197,7 @@ function Shell() {
         screen = <MyPack key={project!.id + arg} operatorId={arg} />;
         break;
       case "plus":
-        screen = <Tools mode={mode} setMode={setMode} />;
+        screen = <Tools mode={mode} setMode={setMode} theme={theme} setTheme={setTheme} />;
         break;
       case "reglages":
         screen = <CameraSettings />;
@@ -206,7 +231,7 @@ function Shell() {
         break;
       case "m":
         screen =
-          arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : <ModuleScreen key={arg} moduleId={arg} />;
+          arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : arg === "sde" ? <Sde /> : <ModuleScreen key={arg} moduleId={arg} />;
         break;
       case "scenes":
       case "multicam":
@@ -268,16 +293,19 @@ function Shell() {
         </a>
         {project && (
           <button className="side-shoot" onClick={() => navigate("/tournage")}>
-            <strong>{project.name}</strong>
-            <small>
-              {project.date
-                ? new Date(project.date + "T12:00").toLocaleDateString("fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "Date à définir"}
-            </small>
+            <CoupleAvatar project={project} />
+            <span>
+              <strong>{project.name}</strong>
+              <small>
+                {project.date
+                  ? new Date(project.date + "T12:00").toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "Date à définir"}
+              </small>
+            </span>
           </button>
         )}
         {project && (

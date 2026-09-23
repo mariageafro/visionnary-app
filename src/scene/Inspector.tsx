@@ -26,7 +26,7 @@ import {
 import type { Item, MediaEntry } from "../types";
 import type { SceneElement, ScenePlan } from "./types";
 import { focalPresets, lightById, lightTypes, movementById, movementsFor, roles, sensors, supports } from "./catalog";
-import { cameraFov, dist, estimateFraming, frameWidth, round } from "./geometry";
+import { angleTo, cameraFov, dist, estimateFraming, frameWidth, round } from "./geometry";
 import { poseAt } from "./motion";
 import type { Align } from "./ops";
 import { Thumb, useMediaQuery } from "../ui";
@@ -265,9 +265,54 @@ export default function Inspector(props: InspectorProps) {
           <IdCard size={17} /> Fiche caméra plein écran
         </button>
       )}
+
+      {/* Tout en haut, sans repli ni scroll : c'est ce que l'utilisateur cherche en premier après avoir sélectionné une caméra. */}
+      {el.kind === "camera" && (
+        <Section title="Référence à reproduire">
+          {reference ? (
+            <button type="button" className="sd-ref" onClick={() => props.onPinReference(el)}>
+              <Thumb media={reference} />
+              <span>Changer la référence</span>
+            </button>
+          ) : (
+            <button type="button" className="btn small gold" onClick={() => props.onPinReference(el)}>
+              <Pin size={15} /> Épingler une photo, une frame ou une vidéo
+            </button>
+          )}
+          {reference && (
+            <button type="button" className="btn small ghost" onClick={() => patch({ referenceId: undefined }, "Référence retirée")}>
+              <X size={14} /> Retirer
+            </button>
+          )}
+          {props.onCreateShot && (
+            <button type="button" className="btn gold" onClick={() => props.onCreateShot!(el)}>
+              <Clapperboard size={16} /> Enregistrer ce mouvement comme un plan à tourner
+            </button>
+          )}
+          {shots.length > 0 && (
+            <details className="sd-details">
+              <summary>Plans de la shot list liés ({el.shotIds?.length ?? 0})</summary>
+              <div className="sd-shots">
+                {shots.map((s) => {
+                  const on = el.shotIds?.includes(s.id) ?? false;
+                  return (
+                    <label key={s.id} className="sd-check">
+                      <input type="checkbox" checked={on} onChange={() => patch({ shotIds: on ? (el.shotIds ?? []).filter((x) => x !== s.id) : [...(el.shotIds ?? []), s.id] }, on ? "Plan délié" : "Plan lié")} />
+                      <span>{s.title}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </details>
+          )}
+        </Section>
+      )}
+
       {el.kind === "camera" && (
         <Section title="Qui filme">
           {pills(el.operatorId, (id) => patch({ operatorId: id || undefined }, id ? "Opérateur affecté" : "Opérateur retiré"))}
+          <label className="sd-check"><input type="checkbox" checked={el.operatorPresent ?? el.support !== "fixe"} onChange={(e) => patch({ operatorPresent: e.target.checked }, e.target.checked ? "Cadreur affiché sur le plan" : "Cadreur masqué sur le plan")} /><span>Afficher le cadreur à côté de la caméra</span></label>
+          <div className="sd-chips"><button className="chip outline" onClick={() => patch({ support: "trepied", operatorPresent: true }, "Caméra sur trépied avec cadreur")}>Trépied + cadreur</button><button className="chip outline" onClick={() => patch({ support: "gimbal", operatorPresent: true }, "Caméra sur stabilisateur avec cadreur")}>Stabilisateur + cadreur</button></div>
         </Section>
       )}
 
@@ -299,48 +344,8 @@ export default function Inspector(props: InspectorProps) {
               ))}
             </select>
           </label>
+          {target && <button type="button" className="btn small" onClick={() => patch({ rotation: Math.round(angleTo(el, target)) }, `Caméra orientée vers ${target.name}`)}>Orienter la caméra vers {target.name}</button>}
           <TextField label="Mission" long value={el.mission ?? ""} placeholder="Ex. gros plan mariée pendant les vœux" onCommit={(v) => patch({ mission: v }, "Mission enregistrée")} />
-        </Section>
-      )}
-
-      {el.kind === "camera" && (
-        <Section title="Référence à reproduire">
-          {reference ? (
-            <button type="button" className="sd-ref" onClick={() => props.onPinReference(el)}>
-              <Thumb media={reference} />
-              <span>Changer la référence</span>
-            </button>
-          ) : (
-            <button type="button" className="btn small" onClick={() => props.onPinReference(el)}>
-              <Pin size={15} /> Épingler une photo, une frame ou une vidéo
-            </button>
-          )}
-          {reference && (
-            <button type="button" className="btn small ghost" onClick={() => patch({ referenceId: undefined }, "Référence retirée")}>
-              <X size={14} /> Retirer
-            </button>
-          )}
-          {props.onCreateShot && (
-            <button type="button" className="btn small" onClick={() => props.onCreateShot!(el)}>
-              <Clapperboard size={15} /> Enregistrer ce mouvement comme un plan à tourner
-            </button>
-          )}
-          {shots.length > 0 && (
-            <details className="sd-details">
-              <summary>Plans de la shot list liés ({el.shotIds?.length ?? 0})</summary>
-              <div className="sd-shots">
-                {shots.map((s) => {
-                  const on = el.shotIds?.includes(s.id) ?? false;
-                  return (
-                    <label key={s.id} className="sd-check">
-                      <input type="checkbox" checked={on} onChange={() => patch({ shotIds: on ? (el.shotIds ?? []).filter((x) => x !== s.id) : [...(el.shotIds ?? []), s.id] }, on ? "Plan délié" : "Plan lié")} />
-                      <span>{s.title}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </details>
-          )}
         </Section>
       )}
 
@@ -392,6 +397,14 @@ export default function Inspector(props: InspectorProps) {
 
       {el.kind === "light" && (
         <Section title="Lumière">
+          <button
+            type="button"
+            className={"btn small " + (el.lightOn === false ? "" : "gold")}
+            aria-pressed={el.lightOn !== false}
+            onClick={() => patch({ lightOn: el.lightOn === false }, el.lightOn === false ? "Lumière allumée" : "Lumière éteinte")}
+          >
+            {el.lightOn === false ? "Éteinte — allumer" : "Allumée — éteindre"}
+          </button>
           <label className="sd-field">
             <span>Type</span>
             <select
@@ -413,6 +426,8 @@ export default function Inspector(props: InspectorProps) {
           <Range label="Ouverture du faisceau" value={el.beam ?? 60} min={10} max={300} format={(v) => `${v}°`} onPreview={(v) => preview({ beam: v })} onCommit={(v) => patch({ beam: v }, "Faisceau modifié")} />
           <Range label="Portée" value={el.reach ?? 4} min={0.5} max={15} step={0.5} format={(v) => `${v} m`} onPreview={(v) => preview({ reach: v })} onCommit={(v) => patch({ reach: v }, "Portée modifiée")} />
           <NumField label="Hauteur" unit="m" value={el.height ?? 2} min={0} onCommit={(v) => patch({ height: v }, "Hauteur modifiée")} />
+          <span className="sd-sub">Opérateur</span>
+          {pills(el.operatorId, (id) => patch({ operatorId: id || undefined }, id ? "Opérateur affecté" : "Opérateur retiré"))}
         </Section>
       )}
 
@@ -426,6 +441,7 @@ export default function Inspector(props: InspectorProps) {
               </button>
             ))}
           </div>
+          <label className="sd-field"><span>Tenue</span><select value={el.outfit ?? "auto"} onChange={(event) => patch({ outfit: event.target.value === "auto" ? undefined : event.target.value as SceneElement["outfit"] }, "Tenue modifiée")}><option value="auto">Selon le rôle</option><option value="robe">Robe</option><option value="costume">Costume</option><option value="tenue">Tenue simple</option></select></label>
           {(el.role === "photographe" || el.role === "videaste") && (
             <>
               <span className="sd-sub">Membre de l’équipe</span>
@@ -435,6 +451,12 @@ export default function Inspector(props: InspectorProps) {
         </Section>
       )}
 
+      {["person", "object", "wall", "zone", "rows", "crowd"].includes(el.kind) && <Section title={el.kind === "person" ? "Couleurs de la personne" : "Couleur de l’élément"}>
+        <div className="sd-chips">{[["Noir", "#202124"], ["Blanc", "#f4f1eb"], ["Ivoire", "#e7dcc2"], ["Bleu", "#35507a"], ["Rose", "#d994a9"]].map(([label, value]) => <button key={label} type="button" className={"chip" + (el.color === value ? " gold" : " outline")} onClick={() => patch({ color: value }, `${label} appliqué`)}>{label}</button>)}</div>
+        <label className="sd-field"><span>{el.kind === "person" ? "Couleur des vêtements" : "Autre couleur"}</span><input type="color" value={el.color ?? (el.kind === "person" ? roles.find((role) => role.id === el.role)?.color ?? "#9aa1ab" : "#a8998a")} onChange={(event) => patch({ color: event.target.value }, "Couleur modifiée")} /></label>
+        {el.kind === "person" && <label className="sd-field"><span>Teint</span><input type="color" value={el.skinColor ?? "#d6b599"} onChange={(event) => patch({ skinColor: event.target.value }, "Teint modifié")} /></label>}
+      </Section>}
+
       {el.kind === "note" && (
         <Section title="Annotation">
           <TextField label="Texte" long value={el.text ?? ""} onCommit={(v) => patch({ text: v }, "Annotation modifiée")} />
@@ -443,6 +465,7 @@ export default function Inspector(props: InspectorProps) {
 
       <Section title="Position">
         <Range label="Orientation" value={Math.round(el.rotation)} min={-180} max={180} format={(v) => `${v}°`} onPreview={(v) => preview({ rotation: v })} onCommit={(v) => patch({ rotation: v }, "Orientation modifiée")} />
+        <div className="sd-chips" aria-label="Direction rapide">{[["↑", -90], ["→", 0], ["↓", 90], ["←", 180]].map(([label, degrees]) => <button key={label} type="button" className={"chip" + (el.rotation === degrees ? " gold" : " outline")} aria-label={`Orienter ${label}`} onClick={() => patch({ rotation: Number(degrees) }, "Orientation modifiée")}>{label}</button>)}</div>
         <div className="sd-row">
           <NumField label="X" unit="m" value={el.x} onCommit={(v) => patch({ x: v })} />
           <NumField label="Y" unit="m" value={el.y} onCommit={(v) => patch({ y: v })} />

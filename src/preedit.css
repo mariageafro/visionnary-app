@@ -178,7 +178,7 @@
 }
 .preedit .preedit-primary {
   background: var(--gold);
-  color: #17221f;
+  color: var(--gold-ink);
   font-weight: 700;
 }
 .preedit-transport input {

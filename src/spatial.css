@@ -107,7 +107,7 @@
 }
 .spatial .spatial-primary {
   background: var(--gold);
-  color: #172020;
+  color: var(--gold-ink);
   font-weight: 700;
 }
 .spatial-inspector {

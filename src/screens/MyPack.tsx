@@ -1,9 +1,9 @@
-import { Camera, Phone, Printer } from "lucide-react";
+import { Camera, Phone, Printer, Radar } from "lucide-react";
 import type { Item } from "../types";
 import { done, sectionOf } from "../model";
 import { operatorDayOrder } from "../moments";
 import { useProject } from "../store";
-import { Empty, Row, Screen } from "../ui";
+import { Empty, navigate, Row, Screen } from "../ui";
 import { itemsOf, MemberAvatar, titleOf } from "./common";
 
 /**
@@ -16,6 +16,12 @@ export default function MyPack({ operatorId }: { operatorId: string }) {
   const member = p.items.find((i) => i.id === operatorId && i.module === "team");
   const stages = itemsOf(p, "stages");
   const shots = operatorDayOrder(p, operatorId);
+  const missions = stages.filter((stage) => stage.operatorId === operatorId);
+  const tasks = itemsOf(p, "checklists").filter((item) => item.operatorId === operatorId);
+  const reminders = itemsOf(p, "reminders").filter((item) => item.operatorId === operatorId);
+  const gear = itemsOf(p, "equipment").filter((item) => item.operatorId === operatorId);
+  const audio = itemsOf(p, "audio").filter((item) => item.operatorId === operatorId);
+  const scenes = (p.scenePlans ?? []).filter((scene) => missions.some((stage) => stage.id === scene.stageId) || scene.elements.some((element) => element.operatorId === operatorId));
 
   if (!member)
     return (
@@ -43,14 +49,28 @@ export default function MyPack({ operatorId }: { operatorId: string }) {
     }
   }
 
+  const openInFieldMode = () => {
+    try {
+      localStorage.setItem("visionnary-me-" + p.id, operatorId);
+    } catch {
+      /* filtre non mémorisé, le mode Jour J s'ouvrira non filtré */
+    }
+    navigate("/jourj");
+  };
+
   return (
     <Screen
       title="Mes plans"
       backTo="/equipe"
       actions={
-        <button className="icon-btn" aria-label="Imprimer / enregistrer en PDF" onClick={() => window.print()}>
-          <Printer size={20} />
-        </button>
+        <>
+          <button className="icon-btn" aria-label="Ouvrir en Mode Jour J filtré sur ce cadreur" onClick={openInFieldMode}>
+            <Radar size={20} />
+          </button>
+          <button className="icon-btn" aria-label="Imprimer / enregistrer en PDF" onClick={() => window.print()}>
+            <Printer size={20} />
+          </button>
+        </>
       }
     >
       <div className="card no-print" style={{ display: "flex", gap: 14, alignItems: "center" }}>
@@ -58,7 +78,7 @@ export default function MyPack({ operatorId }: { operatorId: string }) {
         <div style={{ flex: 1 }}>
           <h2 style={{ margin: 0 }}>{member.title}</h2>
           <p className="muted" style={{ margin: "2px 0 0" }}>
-            {[member.role, member.camera].filter(Boolean).join(" · ") || "Rôle à définir"}
+            {[member.role, member.camera, member.lenses, member.audioKit, member.intercom].filter(Boolean).join(" · ") || "Rôle à définir"}
           </p>
         </div>
         {member.phone ? (
@@ -67,6 +87,15 @@ export default function MyPack({ operatorId }: { operatorId: string }) {
           </a>
         ) : null}
       </div>
+
+      <div className="card no-print" style={{ marginTop: 12 }}>
+        <div className="section-title">Ma journée</div>
+        <div className="kv">
+          <div><span>Étapes</span><b>{missions.map((item) => `${item.time || "—:—"} · ${item.title}`).join(" / ") || "Aucune étape assignée"}</b></div>
+          <div><span>Prochaine mission</span><b>{missions.find((item) => !done(item))?.title || shots.find((item) => !done(item))?.title || "Aucune mission restante"}</b></div>
+        </div>
+      </div>
+      {[{ title: "Matériel attribué", items: gear.map((item) => `${item.title}${item.quantity ? ` ×${item.quantity}` : ""}${item.state ? ` · ${item.state}` : ""}`) }, { title: "Checklist personnelle", items: tasks.map((item) => `${done(item) ? "✓" : "○"} ${item.title}`) }, { title: "Rappels personnels", items: reminders.map((item) => item.title) }, { title: "Audio", items: audio.map((item) => `${item.title}${item.source ? ` · ${item.source}` : ""}`) }, { title: "Plans de scène", items: scenes.map((scene) => scene.name) }].map((group) => <section key={group.title} className="card no-print" style={{ marginTop: 12 }}><div className="section-title">{group.title}<span>{group.items.length}</span></div>{group.items.length ? <ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul> : <p className="muted">Aucun élément assigné.</p>}</section>)}
 
       <div className="card no-print" style={{ marginTop: 12 }}>
         <div className="section-title" style={{ margin: 0 }}>
@@ -115,6 +144,11 @@ export default function MyPack({ operatorId }: { operatorId: string }) {
           {p.name} · {p.date}
         </p>
         <p>{[member.role, member.camera, member.phone].filter(Boolean).join(" · ")}</p>
+        <p>{[member.lenses, member.audioKit, member.batteries, member.cards, member.accessories, member.intercom].filter(Boolean).join(" · ")}</p>
+        <h2>Étapes et missions</h2><ul>{missions.map((item) => <li key={item.id}>{item.time || "—:—"} · {item.title}</li>)}</ul>
+        <h2>Matériel personnel</h2><ul>{gear.map((item) => <li key={item.id}>{item.title}{item.quantity ? ` ×${item.quantity}` : ""} · {String(item.state || "état à vérifier")}{item.connection ? " · Branchement : " + item.connection : ""}{item.configuration ? " · " + item.configuration : ""}{item.quickProcedure ? " · Procédure : " + item.quickProcedure : ""}{item.commonProblem ? " · Problème : " + item.commonProblem : ""}{item.solution ? " · Solution : " + item.solution : ""}{item.notes ? " · Note : " + item.notes : ""}</li>)}</ul>
+        <h2>Checklist et rappels</h2><ul>{[...tasks, ...reminders].map((item) => <li key={item.id}>[{done(item) ? "x" : " "}] {item.title}</li>)}</ul>
+        <h2>Audio et scènes</h2><ul>{[...audio.map((item) => item.title), ...scenes.map((scene) => scene.name)].map((item) => <li key={item}>{item}</li>)}</ul>
         {groups.map((g) => (
           <div key={g.key + g.shots[0].id}>
             <h2>

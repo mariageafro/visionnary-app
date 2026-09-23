@@ -122,6 +122,9 @@ export default function DayRun({
 }) {
   const now = useNow();
   const [proposal, setProposal] = useState<ReturnType<typeof proposeReschedule> | null>(null);
+  const [reviewRun, setReviewRun] = useState<StageRun | null>(null);
+  const [reviewChoices, setReviewChoices] = useState<Record<string, string>>({});
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const runs = runStages(p);
   const running = runs.find((r) => r.state === "en cours");
   const next = runs.find((r) => r.state === "à venir");
@@ -147,8 +150,39 @@ export default function DayRun({
     changes.set(run.item.id, { startedAt: stamp(), actualTime: hhmm(new Date()), status: "en cours" });
     patch(changes, `« ${run.item.title} » démarrée`);
   }
+  const stageActions = (run: StageRun) => p.items.filter((item) =>
+    item.stageId === run.item.id &&
+    ["shots", "checklists", "reminders", "equipment", "backups", "sde"].includes(item.module) &&
+    !["archivé", "sauté", "impossible"].includes(item.status) &&
+    !["tourné", "excellent", "terminé", "vérifié", "livré"].includes(item.status),
+  );
+  function closeReview(run: StageRun, choices: Record<string, string>, notes: Record<string, string>) {
+    const changes = new Map<string, Partial<Item>>();
+    for (const item of stageActions(run)) {
+      const choice = choices[item.id];
+      if (!choice) continue;
+      const status = choice === "fait" ? (item.module === "shots" ? "tourné" : "terminé")
+        : choice === "non-fait" ? "prévu"
+        : choice === "plus-nécessaire" ? "archivé"
+        : choice;
+      const note = notes[item.id]?.trim();
+      changes.set(item.id, {
+        status,
+        ...(choice === "non-fait" && note ? { notes: [item.notes.trim(), "Fin d’étape : " + note].filter(Boolean).join("\n\n") } : {}),
+      });
+    }
+    changes.set(run.item.id, { endedAt: stamp(), status: "terminé" });
+    patch(changes, `« ${run.item.title} » terminée`);
+    setReviewRun(null);
+  }
   function finish(run: StageRun) {
-    patch(new Map([[run.item.id, { endedAt: stamp(), status: "terminé" }]]), `« ${run.item.title} » terminée`);
+    if (stageActions(run).length) {
+      setReviewRun(run);
+      setReviewChoices({});
+      setReviewNotes({});
+      return;
+    }
+    closeReview(run, {}, {});
   }
 
   return (
@@ -279,6 +313,29 @@ export default function DayRun({
             >
               <Check size={16} /> Valider
             </button>
+          </div>
+        </Sheet>
+      )}
+      {reviewRun && (
+        <Sheet title={"Fin de mission · " + reviewRun.item.title} onClose={() => setReviewRun(null)}>
+          <p className="muted">Certains éléments de cette étape ne sont pas encore validés. Choisissez un état si vous le savez ; vous pouvez aussi terminer l’étape sans tout traiter.</p>
+          <div className="finish-review-list">
+            {stageActions(reviewRun).map((item) => (
+              <article className="finish-review-item" key={item.id}>
+                <strong>{item.title}</strong>
+                <small>{item.module === "shots" ? "Plan" : item.module === "equipment" ? "Matériel" : item.module === "checklists" ? "Checklist" : item.module === "reminders" ? "Rappel" : "Transfert / postproduction"}</small>
+                <div className="finish-review-actions">
+                  {([["fait", "Fait ?"], ["non-fait", "Non fait"], ["sauté", "Sauté"], ["impossible", "Impossible"], ["plus-nécessaire", "Plus nécessaire"]] as const).map(([value, label]) => (
+                    <button key={value} type="button" className={"btn small" + (reviewChoices[item.id] === value ? " gold" : "")} aria-pressed={reviewChoices[item.id] === value} onClick={() => setReviewChoices((current) => ({ ...current, [item.id]: value }))}>{label}</button>
+                  ))}
+                </div>
+                {reviewChoices[item.id] === "non-fait" && <label className="field">Que s’est-il passé ? (facultatif)<textarea value={reviewNotes[item.id] ?? ""} onChange={(e) => setReviewNotes((current) => ({ ...current, [item.id]: e.target.value }))} /></label>}
+              </article>
+            ))}
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn" onClick={() => setReviewRun(null)}>Revenir à l’étape</button>
+            <button type="button" className="btn gold" onClick={() => closeReview(reviewRun, reviewChoices, reviewNotes)}>Terminer l’étape</button>
           </div>
         </Sheet>
       )}

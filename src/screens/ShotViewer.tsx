@@ -1,6 +1,6 @@
 import ReferenceGallery from "./ReferenceGallery";
 import { useEffect, useRef, useState } from "react";
-import { Camera, Check, Clapperboard, Pencil, Plane, RotateCcw, Star, Video, X } from "lucide-react";
+import { Camera, Check, Clapperboard, Eye, EyeOff, Pencil, Plane, RotateCcw, Star, Video, X } from "lucide-react";
 import type { Item } from "../types";
 import { done, framingCode, makeItem, sectionOf, transitionTypes } from "../model";
 import { kindLabels, shotKind } from "../stageStats";
@@ -23,6 +23,7 @@ export default function ShotViewer({ ids, start, context, onClose }: { ids: stri
   const [index, setIndex] = useState(start);
   const [editing, setEditing] = useState<Item | null>(null);
   const [flash, setFlash] = useState("");
+  const [showInfo, setShowInfo] = useState(true);
   const shots = ids.map((id) => p.items.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const at = Math.min(index, shots.length - 1);
   const shot = shots[at];
@@ -97,6 +98,9 @@ export default function ShotViewer({ ids, start, context, onClose }: { ids: stri
             </strong>
             {context && <small>{context}</small>}
           </div>
+          <button className="icon-btn" aria-pressed={!showInfo} aria-label={showInfo ? "Cacher les infos" : "Montrer les infos"} title={showInfo ? "Cacher les infos" : "Montrer les infos"} onClick={() => setShowInfo(!showInfo)}>
+            {showInfo ? <EyeOff size={19} /> : <Eye size={19} />}
+          </button>
           <button className="icon-btn" aria-label="Modifier le plan" onClick={() => setEditing(shot)}>
             <Pencil size={19} />
           </button>
@@ -104,7 +108,7 @@ export default function ShotViewer({ ids, start, context, onClose }: { ids: stri
 
         <nav className="mission-nav" aria-label="Changer de shot"><button className="btn small" disabled={at===0} onClick={()=>go(-1)}>Plan précédent</button><button className="btn small" disabled={at>=shots.length-1} onClick={()=>go(1)}>Plan suivant</button></nav>
         <div
-          className="sv-main"
+          className={"sv-main" + (showInfo ? "" : " info-hidden")}
           onPointerDown={(e) => {
             if ((e.target as Element).closest("video, button, select, input, a")) return;
             swipe.current = { x: e.clientX, y: e.clientY };

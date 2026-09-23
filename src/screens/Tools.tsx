@@ -7,6 +7,7 @@ import {
   Clock3,
   CloudSun,
   Cloud,
+  Contrast,
   Film,
   Flag,
   Focus,
@@ -17,6 +18,7 @@ import {
   MapPin,
   MessageCircle,
   Moon,
+  MoonStar,
   NotebookPen,
   Play,
   ScanLine,
@@ -24,7 +26,7 @@ import {
   SunMedium,
   Crosshair,
 } from "lucide-react";
-import type { Mode } from "../App";
+import type { Mode, Theme } from "../App";
 import { useStore } from "../store";
 import { moduleById } from "../model";
 import { Row, Screen, Sheet, Tile } from "../ui";
@@ -67,7 +69,7 @@ const groups: [string, [string, string, typeof Bell, string?][]][] = [
   ],
 ];
 
-export default function Tools({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+export default function Tools({ mode, setMode, theme, setTheme }: { mode: Mode; setMode: (m: Mode) => void; theme: Theme; setTheme: (t: Theme) => void }) {
   const [planB, setPlanB] = useState(false);
   return (
     <Screen title="Outils rapides" backTo="/accueil">
@@ -95,6 +97,24 @@ export default function Tools({ mode, setMode }: { mode: Mode; setMode: (m: Mode
           ] as const
         ).map(([id, label, Icon, sub]) => (
           <button key={id} className={"tile" + (mode === id ? "" : " dark")} onClick={() => setMode(id)} aria-pressed={mode === id}>
+            <Icon size={22} />
+            <strong>{label}</strong>
+            <small>{sub}</small>
+          </button>
+        ))}
+      </div>
+      <div className="section-title">Thème</div>
+      <p className="muted" style={{ margin: "-4px 2px 10px", fontSize: 13 }}>
+        Indépendant du mode ci-dessus : un thème plus blanc, à volonté, quel que soit Studio, Terrain ou Nuit.
+      </p>
+      <div className="tiles">
+        {(
+          [
+            ["sombre", "Sombre", MoonStar, "L’habillage d’origine"],
+            ["clair", "Clair", Contrast, "Un thème plus blanc, plus confortable en intérieur"],
+          ] as const
+        ).map(([id, label, Icon, sub]) => (
+          <button key={id} className={"tile" + (theme === id ? "" : " dark")} onClick={() => setTheme(id)} aria-pressed={theme === id}>
             <Icon size={22} />
             <strong>{label}</strong>
             <small>{sub}</small>

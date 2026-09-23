@@ -165,7 +165,7 @@ export async function workspaceArchive(workspace: Workspace): Promise<Blob> {
         p.coverId,
         ...p.items.flatMap((i) => mediaReferenceKeys.map((k) => i[k])),
         // Fonds de plan et références épinglées sur les caméras.
-        ...(p.scenePlans ?? []).flatMap((s) => [s.background?.mediaId, ...s.elements.map((e) => e.referenceId)]),
+        ...(p.scenePlans ?? []).flatMap((s) => [s.background?.mediaId, s.model3dId, ...s.elements.map((e) => e.referenceId)]),
       ])
       .filter(Boolean)
       .map(String),
