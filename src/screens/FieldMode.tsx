@@ -224,9 +224,12 @@ export default function FieldMode() {
           {shot ? (
             <>
               <div className="field-label now">
-                <b>MAINTENANT</b>
+                <b>{running ? "MAINTENANT" : "PREMIER PLAN À PRÉPARER"}</b>
                 <span>{where(shot)}</span>
               </div>
+              {!running && (
+                <p className="muted field-not-started">Le tournage n’a pas encore démarré · appuyez sur « démarrer » ci-dessus quand vous êtes prêt.</p>
+              )}
               <section className="field-shot">
                 <div className="field-ref" onClick={() => ref && setViewer(true)}>
                   {ref ? (
