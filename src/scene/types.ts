@@ -96,6 +96,10 @@ export interface SceneElement {
   targetId?: string;
   /** Référence épinglée (photo, frame, vidéo) : identifiant d'un média du tournage. */
   referenceId?: string;
+  /** Décalage de la vignette de référence sur la toile, en mètres (0,0 = juste au-dessus de la caméra). */
+  refOffset?: Point;
+  /** Taille de la vignette de référence : 1 = normale, plus grand = agrandie (bascule en un clic). */
+  refScale?: number;
   /** Plans de la shot list liés à cette caméra. */
   shotIds?: string[];
 

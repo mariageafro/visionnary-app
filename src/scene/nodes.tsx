@@ -241,19 +241,34 @@ export function FovCone({ el, pose, target, color, faint = false }: { el: SceneE
 }
 
 /** Caméra : boîtier, objectif, nom (CAM A), couleur de l'opérateur et vignette de la référence épinglée. */
-export function CameraNode({ el, pose, operatorColor, refUrl }: { el: SceneElement; pose: Pose; operatorColor?: string; refUrl?: string }) {
+export function CameraNode({ el, pose, operatorColor, refUrl, editable }: { el: SceneElement; pose: Pose; operatorColor?: string; refUrl?: string; editable?: boolean }) {
   const color = el.color ?? "#e6c27f";
+  const refScale = el.refScale ?? 1;
+  const refW = 0.84 * refScale;
+  const refH = 0.64 * refScale;
+  const refX = el.refOffset?.x ?? 0;
+  const refY = el.refOffset?.y ?? -1.05;
   return (
     <g transform={`translate(${pose.x} ${pose.y})`} className="sd-node">
       {refUrl && (
-        <g transform="translate(0 -1.05)" pointerEvents="none">
+        <g transform={`translate(${refX} ${refY})`} className="sd-ref">
           <defs>
             <clipPath id={`camref-${el.id}`}>
-              <rect x={-0.42} y={-0.32} width={0.84} height={0.64} rx={0.06} />
+              <rect x={-refW / 2} y={-refH / 2} width={refW} height={refH} rx={0.06 * refScale} />
             </clipPath>
           </defs>
-          <rect x={-0.44} y={-0.34} width={0.88} height={0.68} rx={0.08} fill="#0b0b0a" stroke={color} strokeWidth={0.035} />
-          <image href={refUrl} x={-0.42} y={-0.32} width={0.84} height={0.64} preserveAspectRatio="xMidYMid slice" clipPath={`url(#camref-${el.id})`} />
+          <rect data-role={editable ? "ref-move" : undefined} data-id={el.id} x={-refW / 2 - 0.02} y={-refH / 2 - 0.02} width={refW + 0.04} height={refH + 0.04} rx={0.08 * refScale} fill="#0b0b0a" stroke={color} strokeWidth={0.035} cursor={editable ? "move" : undefined} />
+          <image href={refUrl} x={-refW / 2} y={-refH / 2} width={refW} height={refH} preserveAspectRatio="xMidYMid slice" clipPath={`url(#camref-${el.id})`} pointerEvents="none" />
+          {editable && (
+            <g data-role="ref-toggle" data-id={el.id} transform={`translate(${refW / 2 - 0.1} ${-refH / 2 + 0.1})`} cursor="pointer">
+              <circle r={0.13} fill="#0b0b0a" stroke={color} strokeWidth={0.03} />
+              {refScale > 1 ? (
+                <path d="M -0.05 -0.05 L 0.05 0.05 M -0.05 0.05 L 0.05 -0.05" stroke={color} strokeWidth={0.03} strokeLinecap="round" />
+              ) : (
+                <path d="M -0.06 0 H 0.06 M 0 -0.06 V 0.06" stroke={color} strokeWidth={0.03} strokeLinecap="round" />
+              )}
+            </g>
+          )}
         </g>
       )}
       <g transform={`rotate(${pose.rotation})`}>

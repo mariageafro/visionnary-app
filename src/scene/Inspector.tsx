@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import type { SceneElement, ScenePlan } from "./types";
-import { focalPresets, lightById, lightTypes, movementById, movementsFor, roles, sensors, supports } from "./catalog";
+import { focalPresets, groundedSupports, lightById, lightTypes, movementById, movementsFor, roles, sensors, supports } from "./catalog";
 import { angleTo, cameraFov, dist, estimateFraming, frameWidth, round } from "./geometry";
 import { poseAt } from "./motion";
 import type { Align } from "./ops";
@@ -158,6 +158,7 @@ export interface InspectorProps {
 export default function Inspector(props: InspectorProps) {
   const { plan, selection, team, operators, shots, media } = props;
   const touch = useMediaQuery("(pointer: coarse)");
+  const [allowTranslate, setAllowTranslate] = useState(false);
   if (!selection.length)
     return (
       <div className="sd-inspector-empty">
@@ -508,17 +509,27 @@ export default function Inspector(props: InspectorProps) {
 
       {mover && (
         <Section title="Mouvement">
+          {el.kind === "camera" && groundedSupports.has(el.support ?? "") && (
+            <label className="sd-check">
+              <input type="checkbox" checked={allowTranslate} onChange={(e) => setAllowTranslate(e.target.checked)} />
+              <span>Autoriser aussi les mouvements avec déplacement (trépied sur slider, etc.)</span>
+            </label>
+          )}
           <label className="sd-field">
             <span>Type</span>
             <select value={el.motion?.type ?? "none"} onChange={(e) => props.onMovement(el, e.target.value)}>
               <option value="none">Aucun</option>
-              {movementsFor(el.kind).map((m) => (
+              {[...movementsFor(el.kind, el.support, allowTranslate), ...(def && !movementsFor(el.kind, el.support, allowTranslate).includes(def) ? [def] : [])].map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
+                  {m.translates && groundedSupports.has(el.support ?? "") ? " (déplacement)" : ""}
                 </option>
               ))}
             </select>
           </label>
+          {el.kind === "camera" && groundedSupports.has(el.support ?? "") && !allowTranslate && def?.translates && (
+            <p className="muted sd-hint">Ce mouvement déplace la caméra : irréaliste sur un {el.support === "fixe" ? "support fixe" : "trépied"} posé au sol. Cochez la case ci-dessus pour le garder quand même, ou changez le support.</p>
+          )}
           {def && <p className="muted sd-hint">{def.hint}</p>}
           {el.motion && def && (
             <>

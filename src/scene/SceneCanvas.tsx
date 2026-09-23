@@ -48,7 +48,8 @@ type Gesture =
   | { type: "resize"; el: SceneElement }
   | { type: "marquee"; start: Point; now: Point }
   | { type: "waypoint"; index: number }
-  | { type: "bg"; start: Point; bg: SceneBackground };
+  | { type: "bg"; start: Point; bg: SceneBackground }
+  | { type: "ref-move"; el: SceneElement; start: Point; base: Point };
 
 /**
  * Toile du plan de scène : unités en mètres, zoom et déplacement libres (molette, pincement),
@@ -167,6 +168,16 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
     }
     const target = (e.target as Element).closest("[data-role]");
     const role = target?.getAttribute("data-role");
+    if (editable && role === "ref-toggle") {
+      const refEl = byId.get(target!.getAttribute("data-id")!);
+      if (refEl) props.onCommit([{ ...refEl, refScale: (refEl.refScale ?? 1) > 1 ? 1 : 2.4 }], "Vignette de référence redimensionnée");
+      return;
+    }
+    if (editable && role === "ref-move") {
+      const refEl = byId.get(target!.getAttribute("data-id")!);
+      if (refEl) gesture.current = { type: "ref-move", el: refEl, start: p, base: refEl.refOffset ?? { x: 0, y: -1.05 } };
+      return;
+    }
     if (editable && role === "rotate" && selected) return void (gesture.current = { type: "rotate", el: selected });
     if (editable && role === "resize" && selected) return void (gesture.current = { type: "resize", el: selected });
     if (editable && role === "waypoint") return void (gesture.current = { type: "waypoint", index: Number(target!.getAttribute("data-index")) });
@@ -246,6 +257,8 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
       props.onMovePathPoint?.(g.index, { x: round(snap(p.x, step)), y: round(snap(p.y, step)) }, false);
     } else if (g.type === "bg") {
       props.onBackground?.({ ...g.bg, x: g.bg.x + (p.x - g.start.x), y: g.bg.y + (p.y - g.start.y) }, false);
+    } else if (g.type === "ref-move") {
+      props.onDraft([{ ...g.el, refOffset: { x: g.base.x + (p.x - g.start.x), y: g.base.y + (p.y - g.start.y) } }]);
     }
   }
 
@@ -300,6 +313,8 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
       props.onMovePathPoint?.(g.index, { x: round(snap(p.x, step)), y: round(snap(p.y, step)) }, true);
     } else if (g.type === "bg") {
       props.onBackground?.({ ...g.bg, x: g.bg.x + (p.x - g.start.x), y: g.bg.y + (p.y - g.start.y) }, true);
+    } else if (g.type === "ref-move") {
+      props.onCommit([{ ...g.el, refOffset: { x: g.base.x + (p.x - g.start.x), y: g.base.y + (p.y - g.start.y) } }], "Vignette de référence déplacée");
     }
   }
 
@@ -427,7 +442,7 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
         ))}
         {order(["camera"]).map((el) => (
           <g key={el.id} data-id={el.id} className={"sd-cam" + (selection.includes(el.id) ? " is-selected" : "")}>
-            <CameraNode el={el} pose={poseOf(el)} operatorColor={props.operatorColor(el.operatorId)} refUrl={el.referenceId ? cameraThumbs.get(el.referenceId) : undefined} />
+            <CameraNode el={el} pose={poseOf(el)} operatorColor={props.operatorColor(el.operatorId)} refUrl={el.referenceId ? cameraThumbs.get(el.referenceId) : undefined} editable={editable} />
           </g>
         ))}
         {order(["drone"]).map((el) => (

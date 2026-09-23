@@ -5,7 +5,7 @@ import { poseAt, progress, sceneLength, trail } from "../src/scene/motion";
 import { sceneTemplates } from "../src/scene/templates";
 import { addElements, alignElements, assetElement, clonePlan, duplicateElements, expandGroups, groupElements, makePerson, newPlan, removeElements, withMovement } from "../src/scene/ops";
 import { legacyPlan } from "../src/scene/legacy";
-import { assetById } from "../src/scene/catalog";
+import { assetById, movementsFor } from "../src/scene/catalog";
 import { duplicateProject, makeItem, newProject } from "../src/model";
 import { validateWorkspace } from "../src/exports";
 
@@ -227,5 +227,27 @@ describe("plans de scène dans le tournage", () => {
     expect(cam.x).toBeCloseTo(15);
     expect(plan.elements[1].motion).toMatchObject({ type: "walk", duration: 6 });
     expect(p.placements).toHaveLength(2);
+  });
+});
+
+describe("réalisme des mouvements selon le support de caméra", () => {
+  it("masque les mouvements avec déplacement pour un trépied ou un support fixe", () => {
+    const free = movementsFor("camera", "gimbal");
+    const tripod = movementsFor("camera", "trepied");
+    expect(free.some((m) => m.id === "orbit")).toBe(true);
+    expect(tripod.some((m) => m.id === "orbit")).toBe(false);
+    expect(tripod.some((m) => m.id === "push-in")).toBe(false);
+    // Les mouvements rotation seule restent proposés sur trépied.
+    expect(tripod.some((m) => m.id === "pan-left")).toBe(true);
+    expect(tripod.some((m) => m.id === "tilt-up")).toBe(true);
+    expect(movementsFor("camera", "fixe").some((m) => m.id === "orbit")).toBe(false);
+  });
+  it("autorise quand même les mouvements avec déplacement si explicitement demandé", () => {
+    const overridden = movementsFor("camera", "trepied", true);
+    expect(overridden.some((m) => m.id === "orbit")).toBe(true);
+  });
+  it("ne filtre jamais pour les autres éléments (personne, drone)", () => {
+    expect(movementsFor("person", "trepied").length).toBeGreaterThan(0);
+    expect(movementsFor("drone", "trepied").length).toBeGreaterThan(0);
   });
 });

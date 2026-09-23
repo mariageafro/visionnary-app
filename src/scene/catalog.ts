@@ -204,6 +204,8 @@ export interface MovementDef {
   rise?: number;
   duration: number;
   hint: string;
+  /** Implique un déplacement physique de la caméra : irréaliste sur un trépied/support fixe posé au sol. */
+  translates?: boolean;
 }
 export const movements: MovementDef[] = [
   { id: "static", label: "Statique", for: ["camera", "person", "drone"], duration: 4, hint: "Ne bouge pas." },
@@ -212,25 +214,25 @@ export const movements: MovementDef[] = [
   { id: "pan-follow", label: "Pan de suivi", for: ["camera"], target: true, duration: 8, hint: "Le pied reste fixe, l’axe suit le sujet qui se déplace." },
   { id: "tilt-up", label: "Tilt haut", for: ["camera"], duration: 3, hint: "L’axe bascule vers le haut (vu du dessus : indiqué par la flèche)." },
   { id: "tilt-down", label: "Tilt bas", for: ["camera"], duration: 3, hint: "L’axe bascule vers le bas." },
-  { id: "push-in", label: "Push-in", for: ["camera"], distance: 1.5, duration: 4, hint: "La caméra avance vers le sujet." },
-  { id: "pull-out", label: "Pull-out", for: ["camera"], distance: 1.5, duration: 4, hint: "La caméra recule et révèle le décor." },
-  { id: "truck-left", label: "Travelling gauche", for: ["camera"], distance: 2, duration: 4, hint: "Déplacement latéral vers la gauche, même axe." },
-  { id: "truck-right", label: "Travelling droite", for: ["camera"], distance: 2, duration: 4, hint: "Déplacement latéral vers la droite, même axe." },
-  { id: "dolly", label: "Dolly (sur rail)", for: ["camera"], path: true, duration: 5, hint: "Suit un rail dessiné, l’axe reste le même." },
-  { id: "tracking", label: "Tracking", for: ["camera"], target: true, path: true, duration: 6, hint: "Suit la trajectoire dessinée en gardant le sujet dans l’axe." },
-  { id: "follow", label: "Follow (suivi)", for: ["camera"], target: true, duration: 6, hint: "Suit le sujet derrière lui, à distance constante." },
-  { id: "leading", label: "Leading (devant)", for: ["camera"], target: true, duration: 6, hint: "Recule devant le sujet qui avance, face à lui." },
-  { id: "orbit", label: "Orbit", for: ["camera"], target: true, sweep: 90, duration: 5, hint: "Tourne autour du sujet en le gardant au centre." },
-  { id: "arc", label: "Arc", for: ["camera"], target: true, sweep: 60, duration: 4, hint: "Portion d’orbite autour du sujet." },
-  { id: "arc180", label: "Arc 180°", for: ["camera"], target: true, sweep: 180, duration: 6, hint: "Demi-tour autour du sujet." },
-  { id: "orbit360", label: "360°", for: ["camera"], target: true, sweep: 360, duration: 10, hint: "Tour complet autour du sujet." },
-  { id: "reveal", label: "Reveal", for: ["camera"], target: true, distance: 2, duration: 4, hint: "Glisse latéralement et découvre le sujet." },
-  { id: "crane-up", label: "Grue montante", for: ["camera"], rise: 1.5, duration: 5, hint: "La caméra s’élève." },
-  { id: "crane-down", label: "Grue descendante", for: ["camera"], rise: -1.5, duration: 5, hint: "La caméra descend." },
+  { id: "push-in", label: "Push-in", for: ["camera"], distance: 1.5, duration: 4, hint: "La caméra avance vers le sujet.", translates: true },
+  { id: "pull-out", label: "Pull-out", for: ["camera"], distance: 1.5, duration: 4, hint: "La caméra recule et révèle le décor.", translates: true },
+  { id: "truck-left", label: "Travelling gauche", for: ["camera"], distance: 2, duration: 4, hint: "Déplacement latéral vers la gauche, même axe.", translates: true },
+  { id: "truck-right", label: "Travelling droite", for: ["camera"], distance: 2, duration: 4, hint: "Déplacement latéral vers la droite, même axe.", translates: true },
+  { id: "dolly", label: "Dolly (sur rail)", for: ["camera"], path: true, duration: 5, hint: "Suit un rail dessiné, l’axe reste le même.", translates: true },
+  { id: "tracking", label: "Tracking", for: ["camera"], target: true, path: true, duration: 6, hint: "Suit la trajectoire dessinée en gardant le sujet dans l’axe.", translates: true },
+  { id: "follow", label: "Follow (suivi)", for: ["camera"], target: true, duration: 6, hint: "Suit le sujet derrière lui, à distance constante.", translates: true },
+  { id: "leading", label: "Leading (devant)", for: ["camera"], target: true, duration: 6, hint: "Recule devant le sujet qui avance, face à lui.", translates: true },
+  { id: "orbit", label: "Orbit", for: ["camera"], target: true, sweep: 90, duration: 5, hint: "Tourne autour du sujet en le gardant au centre.", translates: true },
+  { id: "arc", label: "Arc", for: ["camera"], target: true, sweep: 60, duration: 4, hint: "Portion d’orbite autour du sujet.", translates: true },
+  { id: "arc180", label: "Arc 180°", for: ["camera"], target: true, sweep: 180, duration: 6, hint: "Demi-tour autour du sujet.", translates: true },
+  { id: "orbit360", label: "360°", for: ["camera"], target: true, sweep: 360, duration: 10, hint: "Tour complet autour du sujet.", translates: true },
+  { id: "reveal", label: "Reveal", for: ["camera"], target: true, distance: 2, duration: 4, hint: "Glisse latéralement et découvre le sujet.", translates: true },
+  { id: "crane-up", label: "Grue montante", for: ["camera"], rise: 1.5, duration: 5, hint: "La caméra s’élève.", translates: true },
+  { id: "crane-down", label: "Grue descendante", for: ["camera"], rise: -1.5, duration: 5, hint: "La caméra descend.", translates: true },
   { id: "handheld", label: "Caméra épaule", for: ["camera"], duration: 5, hint: "Léger flottement vivant autour de la position." },
-  { id: "parallax", label: "Parallaxe", for: ["camera"], target: true, distance: 2, duration: 5, hint: "Travelling latéral en gardant le sujet dans l’axe." },
+  { id: "parallax", label: "Parallaxe", for: ["camera"], target: true, distance: 2, duration: 5, hint: "Travelling latéral en gardant le sujet dans l’axe.", translates: true },
   { id: "whip-pan", label: "Whip pan", for: ["camera"], sweep: 90, duration: 1, hint: "Pan très rapide qui file vers le plan suivant." },
-  { id: "custom", label: "Trajectoire libre", for: ["camera", "drone"], path: true, duration: 6, hint: "Dessinez le chemin point par point." },
+  { id: "custom", label: "Trajectoire libre", for: ["camera", "drone"], path: true, duration: 6, hint: "Dessinez le chemin point par point.", translates: true },
   { id: "walk", label: "Marche", for: ["person"], path: true, duration: 8, hint: "La personne suit le chemin dessiné." },
   { id: "turn", label: "Se retourne", for: ["person"], sweep: 180, duration: 1.5, hint: "Pivote sur place (ex. le marié se retourne)." },
   { id: "top-shot", label: "Top shot", for: ["drone"], rise: 15, duration: 6, hint: "Monte à la verticale au-dessus du sujet." },
@@ -244,9 +246,18 @@ export const movements: MovementDef[] = [
   { id: "fly-over", label: "Survol", for: ["drone"], path: true, duration: 10, hint: "Survole le lieu selon le chemin dessiné." },
 ];
 export const movementById = (id?: string) => movements.find((m) => m.id === id);
-/** Mouvements proposés pour un élément donné. */
-export const movementsFor = (kind: ElementKind): MovementDef[] =>
-  movements.filter((m) => m.for.includes(kind === "person" || kind === "crowd" ? "person" : kind === "drone" ? "drone" : "camera"));
+/** Support de caméra posé au sol : ne peut pas se déplacer physiquement, seulement tourner (pan/tilt). */
+export const groundedSupports = new Set(["trepied", "fixe"]);
+/**
+ * Mouvements proposés pour un élément donné. Pour une caméra trépied/fixe, les mouvements qui
+ * impliquent un déplacement physique (travelling, orbite, grue…) sont masqués par défaut — irréaliste
+ * pour un support posé au sol — sauf `allowTranslate` (l'utilisateur les demande explicitement).
+ */
+export const movementsFor = (kind: ElementKind, support?: string, allowTranslate = false): MovementDef[] => {
+  const list = movements.filter((m) => m.for.includes(kind === "person" || kind === "crowd" ? "person" : kind === "drone" ? "drone" : "camera"));
+  if (kind !== "camera" || allowTranslate || !groundedSupports.has(support ?? "")) return list;
+  return list.filter((m) => !m.translates);
+};
 
 /** Couleurs des calques et libellés. */
 export const layers: [LayerId, string][] = [
