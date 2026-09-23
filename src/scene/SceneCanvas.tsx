@@ -2,7 +2,7 @@ import type { SceneDisplayOptions } from "./SceneDisplay";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { MediaEntry } from "../types";
 import type { Point, SceneBackground, SceneElement, ScenePlan } from "./types";
-import { useObjectUrl } from "../ui";
+import { useObjectUrl, useObjectUrls } from "../ui";
 import { angleTo, bounds, clamp, contains, direction, dist, rad, round, sizeOf, snap } from "./geometry";
 import { poseAt, trail, type Pose } from "./motion";
 import { shiftElement } from "./ops";
@@ -73,6 +73,17 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
   const bgMedia = plan.background ? media.find((m) => m.id === plan.background!.mediaId) : undefined;
   const bgSharp = bgMedia && bgMedia.type.startsWith("image/") && (bgMedia.width ?? 0) * (bgMedia.height ?? 0) <= 16e6;
   const bgUrl = useObjectUrl(bgMedia ? (bgSharp ? bgMedia.blob : bgMedia.thumbnail ?? bgMedia.blob) : undefined);
+  // Vignette de la référence épinglée, affichée directement sur l'élément caméra dans la toile.
+  const cameraThumbEntries = useMemo(
+    () =>
+      plan.elements
+        .filter((el) => el.kind === "camera" && el.referenceId)
+        .map((el) => media.find((m) => m.id === el.referenceId))
+        .filter((m): m is NonNullable<typeof m> => !!m && m.type.startsWith("image/"))
+        .map((m) => ({ id: m.id, blob: m.thumbnail ?? m.blob })),
+    [plan.elements, media],
+  );
+  const cameraThumbs = useObjectUrls(cameraThumbEntries);
 
   useEffect(() => {
     const el = box.current;
@@ -416,7 +427,7 @@ const SceneCanvas = forwardRef<CanvasHandle, Props>(function SceneCanvas(props, 
         ))}
         {order(["camera"]).map((el) => (
           <g key={el.id} data-id={el.id} className={"sd-cam" + (selection.includes(el.id) ? " is-selected" : "")}>
-            <CameraNode el={el} pose={poseOf(el)} operatorColor={props.operatorColor(el.operatorId)} />
+            <CameraNode el={el} pose={poseOf(el)} operatorColor={props.operatorColor(el.operatorId)} refUrl={el.referenceId ? cameraThumbs.get(el.referenceId) : undefined} />
           </g>
         ))}
         {order(["drone"]).map((el) => (

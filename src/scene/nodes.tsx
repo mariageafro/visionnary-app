@@ -240,11 +240,22 @@ export function FovCone({ el, pose, target, color, faint = false }: { el: SceneE
   );
 }
 
-/** Caméra : boîtier, objectif, nom (CAM A) et couleur de l'opérateur. */
-export function CameraNode({ el, pose, operatorColor }: { el: SceneElement; pose: Pose; operatorColor?: string }) {
+/** Caméra : boîtier, objectif, nom (CAM A), couleur de l'opérateur et vignette de la référence épinglée. */
+export function CameraNode({ el, pose, operatorColor, refUrl }: { el: SceneElement; pose: Pose; operatorColor?: string; refUrl?: string }) {
   const color = el.color ?? "#e6c27f";
   return (
     <g transform={`translate(${pose.x} ${pose.y})`} className="sd-node">
+      {refUrl && (
+        <g transform="translate(0 -1.05)" pointerEvents="none">
+          <defs>
+            <clipPath id={`camref-${el.id}`}>
+              <rect x={-0.42} y={-0.32} width={0.84} height={0.64} rx={0.06} />
+            </clipPath>
+          </defs>
+          <rect x={-0.44} y={-0.34} width={0.88} height={0.68} rx={0.08} fill="#0b0b0a" stroke={color} strokeWidth={0.035} />
+          <image href={refUrl} x={-0.42} y={-0.32} width={0.84} height={0.64} preserveAspectRatio="xMidYMid slice" clipPath={`url(#camref-${el.id})`} />
+        </g>
+      )}
       <g transform={`rotate(${pose.rotation})`}>
         {el.support === "trepied" || el.support === "fixe" ? <g stroke={color} strokeWidth={0.038} strokeLinecap="round" opacity={0.88}><path d="M -0.1 0.05 L -0.37 0.36 M -0.1 0.05 L 0.13 0.36 M -0.1 0.05 L -0.1 -0.38"/><circle cx={-0.1} cy={0.05} r={0.045} fill={color}/></g> : null}
         {el.support === "gimbal" && <path d="M -0.28 -0.28 Q -0.47 0 -0.28 0.28 M -0.28 0.28 L -0.17 0.34" fill="none" stroke={color} strokeWidth={0.055} strokeLinecap="round" />}

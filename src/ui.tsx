@@ -239,6 +239,23 @@ export function useObjectUrl(blob?: Blob) {
   return url;
 }
 
+/**
+ * Comme useObjectUrl, mais pour un nombre variable de blobs (ex. plusieurs caméras
+ * référençant chacune une photo différente dans le plan de scène). Recrée les URLs
+ * seulement quand la liste d'identifiants change, révoque toujours les anciennes.
+ */
+export function useObjectUrls(entries: { id: string; blob: Blob }[]): Map<string, string> {
+  const [urls, setUrls] = useState<Map<string, string>>(new Map());
+  const key = entries.map((e) => e.id).join(",");
+  useEffect(() => {
+    const next = new Map(entries.map((e) => [e.id, URL.createObjectURL(e.blob)]));
+    setUrls(next);
+    return () => next.forEach((u) => URL.revokeObjectURL(u));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return urls;
+}
+
 export function Thumb({ media, className = "", onClick, full = false, animate = false }: { media?: MediaEntry; className?: string; onClick?: () => void; full?: boolean; animate?: boolean }) {
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
   const container = useRef<HTMLDivElement & HTMLButtonElement>(null);
