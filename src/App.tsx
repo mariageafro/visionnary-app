@@ -49,6 +49,7 @@ import ScenesList from "./scene/ScenesList";
 import SceneDesigner from "./scene/SceneDesigner";
 import Coverage from "./screens/Coverage";
 import Sde from "./screens/Sde";
+import Teaser from "./screens/Teaser";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
@@ -231,7 +232,7 @@ function Shell() {
         break;
       case "m":
         screen =
-          arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : arg === "sde" ? <Sde /> : <ModuleScreen key={arg} moduleId={arg} />;
+          arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : arg === "sde" ? <Sde /> : arg === "teaser" ? <Teaser /> : <ModuleScreen key={arg} moduleId={arg} />;
         break;
       case "scenes":
       case "multicam":

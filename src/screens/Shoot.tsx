@@ -32,6 +32,7 @@ import {
   MoveRight,
   ClipboardList,
   Check,
+  Scissors,
 } from "lucide-react";
 import type { Item, MediaEntry, Project } from "../types";
 import { coverage, done, duplicateProject, makeItem, mediaReferenceKeys, moduleById, uid } from "../model";
@@ -49,6 +50,7 @@ const sections: [string, string, typeof Clock3, string?][] = [
   ["/deroule", "Déroulé du jour J", Clock3],
   ["/m/shots", "Plans & scènes", Clapperboard],
   ["/m/inspirations", "Inspirations", Images],
+  ["/m/teaser", "Teaser", Scissors],
   ["/m/venues", "Lieux & repérage", MapPin],
   ["/checklist", "Checklist", ListChecks],
   ["/rappels", "Rappels", Bell],
@@ -74,6 +76,17 @@ const sections: [string, string, typeof Clock3, string?][] = [
 function countFor(p: Project, path: string) {
   const id = path.startsWith("/m/") ? path.slice(3) : { "/deroule": "stages", "/checklist": "checklists", "/rappels": "reminders", "/notes": "notes" }[path];
   if (path === "/scenes") return p.scenePlans?.length ?? 0;
+  if (path === "/m/teaser")
+    return p.items
+      .filter((i) => i.module === "inspirations")
+      .reduce((sum, item) => {
+        try {
+          const parsed: unknown = JSON.parse(String(item.segments || "[]"));
+          return sum + (Array.isArray(parsed) ? parsed.length : 0);
+        } catch {
+          return sum;
+        }
+      }, 0);
   return id ? p.items.filter((i) => i.module === id && i.status !== "archivé").length : 0;
 }
 
