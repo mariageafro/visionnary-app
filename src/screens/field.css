@@ -45,16 +45,49 @@
 }
 .field-stage {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--bg-2);
   border: 1px solid var(--line-dark);
   text-align: left;
+}
+/* L'étape à démarrer est l'action principale avant le tournage : on la met en avant, comme la
+   bordure colorée du plan en cours ailleurs dans ce mode. Une fois « en cours », c'est informatif. */
+.field-stage.field-stage-cta {
+  border-color: var(--gold-2);
+  border-left: 4px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, var(--bg-2));
+}
+.field-stage-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--bg-3);
+  color: var(--gold);
+}
+.field-stage-cta .field-stage-icon {
+  background: var(--gold);
+  color: var(--ink);
+}
+.field-stage-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.field-stage-text .field-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 .field-stage-label {
   font-size: 10px;
@@ -66,11 +99,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 16px;
 }
 .field-stage-time {
   font-variant-numeric: tabular-nums;
   color: var(--text-2);
   font-size: 13px;
+  flex-shrink: 0;
 }
 .field-shot {
   overflow: hidden;

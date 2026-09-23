@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, Bell, Check, ChevronRight, Images, Moon, Play, Pause, RotateCcw, Search, SkipForward, Star, Sun, Plus, Shuffle, Clapperboard } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, Check, ChevronRight, Clock3, Images, Moon, Play, Pause, RotateCcw, Search, SkipForward, Star, Sun, Plus, Shuffle, Clapperboard } from "lucide-react";
 import type { Item } from "../types";
 import { done, sectionOf } from "../model";
 import { dayOrder } from "../moments";
@@ -148,30 +148,37 @@ export default function FieldMode() {
         />
       )}
 
-      <button className="field-stage" onClick={() => navigate("/deroule")}>
-        {running ? (
-          <>
-            <span className="field-stage-label">ÉTAPE EN COURS</span>
-            <strong>{running.item.title}</strong>
-            <span className="field-stage-time">
-              {(() => {
-                const left = running.startedAt! + minutesOf(running.item) * 60000 - now;
-                return left > 0 ? `reste ${clock(left)}` : `dépassé ${clock(-left)}`;
-              })()}
-            </span>
-          </>
-        ) : nextStage ? (
-          <>
-            <span className="field-stage-label">PROCHAINE ÉTAPE</span>
-            <strong>{nextStage.item.title}</strong>
-            <span className="field-stage-time">{String(nextStage.item.time || "")} · démarrer ›</span>
-          </>
-        ) : (
-          <>
-            <span className="field-stage-label">DÉROULÉ</span>
-            <strong>Aucune étape en cours</strong>
-          </>
-        )}
+      <button className={"field-stage" + (!running && nextStage ? " field-stage-cta" : "")} onClick={() => navigate("/deroule")}>
+        <span className="field-stage-icon">{running ? <Clock3 size={20} /> : nextStage ? <Play size={20} fill="currentColor" /> : <Clapperboard size={20} />}</span>
+        <span className="field-stage-text">
+          {running ? (
+            <>
+              <span className="field-stage-label">ÉTAPE EN COURS</span>
+              <span className="field-row">
+                <strong>{running.item.title}</strong>
+                <span className="field-stage-time">
+                  {(() => {
+                    const left = running.startedAt! + minutesOf(running.item) * 60000 - now;
+                    return left > 0 ? `reste ${clock(left)}` : `dépassé ${clock(-left)}`;
+                  })()}
+                </span>
+              </span>
+            </>
+          ) : nextStage ? (
+            <>
+              <span className="field-stage-label">PROCHAINE ÉTAPE</span>
+              <span className="field-row">
+                <strong>{nextStage.item.title}</strong>
+                <span className="field-stage-time">{String(nextStage.item.time || "")} · démarrer ›</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="field-stage-label">DÉROULÉ</span>
+              <strong>Aucune étape en cours</strong>
+            </>
+          )}
+        </span>
       </button>
 
       <Tabs
