@@ -6,11 +6,26 @@ import { libraryOf } from "../library";
 import { listMedia, putMedia } from "../storage";
 import { uid, makeItem } from "../model";
 import { Empty, Screen, Sheet, Thumb, useMedia } from "../ui";
-import { itemsOf, mediaFor, VideoPreview } from "./common";
+import { itemsOf, mediaFor } from "./common";
+import RotatableVideo from "./RotatableVideo";
 import { REF_PRIORITIES, REF_STAGES } from "../refs";
 import "./references-couple.css";
 
 const PAGE = 120;
+
+/** Missions du jour : raccourcis qui regroupent plusieurs catégories de la bibliothèque. */
+const MISSIONS: { id: string; label: string; test: (i: Item) => boolean }[] = [
+  { id: "drone", label: "Lieux & drone", test: (i) => ["Drone", "Lieux"].includes(String(i.category)) },
+  { id: "acc", label: "Accessoires & détails", test: (i) => ["Robe", "Chaussures", "Bijoux", "Bouquet", "Accessoires", "Alliances", "Détails"].includes(String(i.category)) },
+  { id: "pmariee", label: "Préparatifs mariée", test: (i) => i.category === "Préparatifs mariée" },
+  { id: "pmarie", label: "Marié seul / préparatifs", test: (i) => ["Préparatifs marié", "Portrait marié"].includes(String(i.category)) },
+  { id: "gars", label: "Garçons d’honneur", test: (i) => String(i.subject).includes("Garçons") || i.category === "Famille" },
+  { id: "mariee", label: "Portrait mariée", test: (i) => i.category === "Portrait mariée" },
+  { id: "couple", label: "Couple", test: (i) => ["Couple"].includes(String(i.category)) },
+  { id: "cer", label: "Cérémonie", test: (i) => ["Cérémonie religieuse", "Réactions", "Décoration"].includes(String(i.category)) },
+  { id: "rec", label: "Réception & soirée", test: (i) => ["Salle", "Entrées", "Première danse", "Gâteau", "Dancefloor", "Ambiance", "Discours"].includes(String(i.category)) },
+  { id: "fx", label: "Effets & transitions", test: (i) => ["Effets & transitions", "Transitions", "Slow motion", "B-roll"].includes(String(i.category)) },
+];
 
 /**
  * Bibliothèque d'inspiration VISIONNARY : plans classés issus d'une timeline DaVinci Resolve. Distincte des références
@@ -27,6 +42,8 @@ export default function InspirationLibrary() {
   const [tag, setTag] = useState("");
   const [query, setQuery] = useState("");
   const [onlyFav, setOnlyFav] = useState(false);
+  const [luxe, setLuxe] = useState(true);
+  const [mission, setMission] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [viewing, setViewing] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
@@ -35,7 +52,8 @@ export default function InspirationLibrary() {
   const categories = useMemo(() => { const m = new Map<string, number>(); all.forEach((i) => m.set(String(i.category), (m.get(String(i.category)) ?? 0) + 1)); return [...m].sort((a, b) => b[1] - a[1]); }, [all]);
   const subs = useMemo(() => [...new Set(all.filter((i) => !category || i.category === category).map((i) => String(i.subject)))].sort(), [all, category]);
   const q = query.trim().toLowerCase();
-  const shown = all.filter((i) => (!category || i.category === category) && (!sub || i.subject === sub) && (!onlyFav || i.favorite === true) && (!tag || String(i.tags).includes(tag)) && (!q || `${i.title} ${i.category} ${i.subject} ${i.tags} ${i.refVideo}`.toLowerCase().includes(q)));
+  const missionTest = MISSIONS.find((m) => m.id === mission)?.test;
+  const shown = all.filter((i) => (!luxe || String(i.tags).includes("luxe")) && (!missionTest || missionTest(i)) && (!category || i.category === category) && (!sub || i.subject === sub) && (!onlyFav || i.favorite === true) && (!tag || String(i.tags).includes(tag)) && (!q || `${i.title} ${i.category} ${i.subject} ${i.tags} ${i.refVideo}`.toLowerCase().includes(q)));
   const current = all.find((i) => i.id === viewing);
 
   const toggleFav = (id: string) => library && change({ ...w, projects: w.projects.map((x) => (x.id === library.id ? { ...x, items: x.items.map((i) => (i.id === id ? { ...i, favorite: i.favorite !== true } : i)) } : x)) }, "Favori modifié");
@@ -51,6 +69,10 @@ export default function InspirationLibrary() {
   return (
     <Screen title="Bibliothèque d'inspiration VISIONNARY" backTo="/plus">
       <p className="muted">Idées supplémentaires, classées par catégorie. Elles sont distinctes des références choisies par le couple. Choisissez des plans puis « Ajouter au mariage ».</p>
+      <div className="ref-stages" aria-label="Missions du jour">
+        <button className={"choice" + (luxe ? " on" : "")} onClick={() => { setLuxe(!luxe); setLimit(PAGE); }} title="Style luxe / éditorial haut de gamme des vidéos de référence">★ Luxe / éditorial</button>
+        {MISSIONS.map((m) => <button key={m.id} className={"choice" + (mission === m.id ? " on" : "")} onClick={() => { setMission(mission === m.id ? "" : m.id); setCategory(""); setSub(""); setLimit(PAGE); }}>{m.label}</button>)}
+      </div>
       <div className="ref-stages">
         <button className={"choice" + (!category ? " on" : "")} onClick={() => { setCategory(""); setSub(""); setLimit(PAGE); }}>Tout <small>{all.length}</small></button>
         {categories.map(([name, n]) => <button key={name} className={"choice" + (category === name ? " on" : "")} onClick={() => { setCategory(name); setSub(""); setLimit(PAGE); }}>{name} <small>{n}</small></button>)}
@@ -94,7 +116,7 @@ export default function InspirationLibrary() {
       {current && (
         <Sheet title={String(current.title)} onClose={() => setViewing("")}>
           <div className="ref-viewer">
-            <div className="ref-player">{mediaFor(media, current) ? <div className="ref-video"><VideoPreview media={mediaFor(media, current)!} className="ref-video-el" loop /></div> : null}</div>
+            <div className="ref-player">{mediaFor(media, current) ? <RotatableVideo key={current.id} media={mediaFor(media, current)!} /> : null}</div>
             <div className="ref-detail">
               <p className="ref-desc">{String(current.notes)}</p>
               <dl className="ref-facts"><div><dt>Catégorie</dt><dd>{String(current.category)} › {String(current.subject)}</dd></div><div><dt>Mouvement</dt><dd>{String(current.movement)}</dd></div><div><dt>Source</dt><dd>{String(current.refVideo)} · {String(current.srcIn)}</dd></div><div><dt>Analyse</dt><dd>{String(current.confidence)} — à valider</dd></div></dl>

@@ -3,7 +3,8 @@ import { Check, Layers, Search, Users, X } from "lucide-react";
 import type { Item } from "../types";
 import { useProject } from "../store";
 import { Empty, Screen, Sheet, Thumb, useMedia } from "../ui";
-import { itemsOf, mediaFor, VideoPreview } from "./common";
+import { itemsOf, mediaFor } from "./common";
+import RotatableVideo from "./RotatableVideo";
 import { REF_INTENSITIES, REF_PRIORITIES, REF_STAGES, REF_STATUSES, REF_STYLES, refProgress, refsOf } from "../refs";
 import "./references-couple.css";
 
@@ -160,7 +161,6 @@ export default function References() {
 
 function RefViewer({ item, media, team, onClose, setStatusOf, setField, ids, onNav }: { item: Item; media: ReturnType<typeof useMedia>; team: Item[]; onClose: () => void; setStatusOf: (ids: string[], s: string) => void; setField: (ids: string[], patch: Record<string, string | boolean>, text: string) => void; ids: string[]; onNav: (id: string) => void; clock: () => string }) {
   const clip = mediaFor(media, item);
-  const [slow, setSlow] = useState(false);
   const idx = ids.indexOf(item.id);
   const [notes, setNotes] = useState(String(item.userNotes ?? ""));
   const [alt, setAlt] = useState(String(item.alternative ?? ""));
@@ -168,10 +168,9 @@ function RefViewer({ item, media, team, onClose, setStatusOf, setField, ids, onN
     <Sheet title={String(item.title)} onClose={onClose}>
       <div className="ref-viewer">
         <div className="ref-player">
-          {clip ? <div key={item.id + String(slow)} className="ref-video" data-slow={slow}><VideoPreview media={clip} className="ref-video-el" loop /></div> : <p className="muted">Aperçu indisponible.</p>}
+          {clip ? <RotatableVideo key={clip.id} media={clip} /> : <p className="muted">Aperçu indisponible.</p>}
           <div className="ref-player-tools">
             <button className="btn small" disabled={idx <= 0} onClick={() => onNav(ids[idx - 1])}>← Précédent</button>
-            <button className={"btn small" + (slow ? " gold" : "")} onClick={() => { setSlow(!slow); document.querySelectorAll<HTMLVideoElement>(".ref-video-el").forEach((v) => { v.playbackRate = slow ? 1 : 0.5; }); }}>{slow ? "Vitesse normale" : "Ralenti ×0,5"}</button>
             <button className="btn small" disabled={idx < 0 || idx >= ids.length - 1} onClick={() => onNav(ids[idx + 1])}>Suivant →</button>
           </div>
         </div>

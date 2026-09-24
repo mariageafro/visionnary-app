@@ -159,7 +159,7 @@ export interface MediaEntry {
   duration?: number;
   unsupported?: boolean;
   /** Zoom et cadrage choisis : z ≥ 1, x/y = centre affiché en % de l'image. */
-  view?: { z: number; x: number; y: number };
+  view?: { z: number; x: number; y: number; /** Rotation de l'affichage en degrés (0, 90, 180, 270) : vidéos filmées à la verticale ou couchées. */ r?: number };
 }
 export interface ModuleProps {
   project: Project;
