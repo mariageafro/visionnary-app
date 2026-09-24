@@ -1,5 +1,6 @@
 import { groupSimilar, mediaHash } from "../similar";
 import FloatDock from "./FloatDock";
+import SectionProgress from "./SectionProgress";
 import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
@@ -443,6 +444,7 @@ export default function Shots() {
                 <span>
                   {list.filter(done).length}/{list.length}
                 </span>
+                <SectionProgress items={list} media={media} noun="plans" />
                 <div className="section-tools">
                   <button className="icon-btn small" aria-label={`Ajouter une sous-section à ${section}`} title="Ajouter une sous-section" onClick={() => setSectionEditor({ title: "", parentId: sectionConfig?.id ?? section })}><Plus size={14} /></button>
                   <button className="icon-btn small" aria-label={`Renommer ${section}`} onClick={() => setSectionEditor({ title: section, original: sectionConfig ?? { id: crypto.randomUUID(), title: section, order: orderedSections.indexOf(section) } })}><Pencil size={14} /></button>

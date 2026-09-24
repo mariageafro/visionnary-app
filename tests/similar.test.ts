@@ -51,3 +51,13 @@ describe("sous-sections photo", () => {
     expect(poseSectionTitles(movePoseSectionTo(p, "Marié", "Mariée"))).toEqual(["Accessoires", "Marié", "Mariée", "Cortège"]);
   });
 });
+
+import { progressOf } from "../src/progress";
+describe("avancement d'une section", () => {
+  const mk = (id: string, status: string, extra = {}) => ({ ...makeItem("poses", id, {}), id, status, ...extra }) as ReturnType<typeof makeItem>;
+  it("compte les prises, ignore les éléments masqués", () => {
+    const items = [mk("a", "terminé"), mk("b", "prévu"), mk("c", "archivé"), mk("d", "terminé")];
+    const r = progressOf(items, []);
+    expect([r.total, r.taken, r.pct, r.pending.length]).toEqual([3, 2, 67, 1]);
+  });
+});

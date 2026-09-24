@@ -2,6 +2,7 @@ import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
+import SectionProgress from "./SectionProgress";
 import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
@@ -324,6 +325,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{parentTitleOf(p, section) && <small className="sub-parent">{parentTitleOf(p, section)} › </small>}{section}</strong>}
               <span>{list.filter(done).length}/{list.length}</span>
+              {section !== "À faire absolument" && section !== "Masquées" && <SectionProgress items={[...list, ...sections.filter(([c]) => parentTitleOf(p, c) === section).flatMap(([, l]) => l)]} media={media} />}
               <div className="pose-section-actions">
                 <button className="btn small" onClick={() => add(section, section === "À faire absolument")}><Plus size={14} /> Pose</button>
                 <PickFiles className="btn small" label="Photo / vidéo" onFiles={(files) => queueImport(files, section === "À faire absolument" ? "" : section, section === "À faire absolument")} />
