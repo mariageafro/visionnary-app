@@ -29,3 +29,4 @@
 .rv-box video{position:absolute;left:50%;top:50%;transform-origin:center;background:#000}
 .rv-tools{display:flex;flex-wrap:wrap;gap:6px}.rv-tools .btn{min-height:44px}
 .ref-section{margin:0 0 22px}.ref-section-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ref-section-head .section-progress{flex:1 1 100%}.ref-subsection{margin:10px 0 14px 8px;padding-left:10px;border-left:2px solid var(--gold-2)}.ref-subhead{display:flex;gap:8px;align-items:baseline;margin:0 0 8px;color:var(--text-2)}.ref-subhead b{color:var(--text)}
+.ref-still{width:100%;max-height:64vh}.ref-still img{object-fit:contain!important}

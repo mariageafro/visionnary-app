@@ -23,7 +23,10 @@ export default function References() {
   const { project: p, update, notify } = useProject();
   const media = useMedia(p.id);
   const team = itemsOf(p, "team");
-  const all = refsOf(p);
+  const everything = refsOf(p);
+  const setsPresent = [...new Set(refsOf(p).map((i) => String(i.refSet ?? "resolve")))];
+  const [refSet, setRefSet] = useState(() => (setsPresent.includes("teaser") ? "teaser" : ""));
+  const all = everything.filter((i) => !refSet || String(i.refSet ?? "resolve") === refSet);
   const [stage, setStage] = useState("");
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState("");
@@ -38,7 +41,7 @@ export default function References() {
   const [who, setWho] = useState(() => { try { return localStorage.getItem("visionnary-who") ?? ""; } catch { return ""; } });
   const chooseWho = (name: string) => { setWho(name); try { localStorage.setItem("visionnary-who", name); } catch { /* non mémorisé */ } };
 
-  const stageNames = useMemo(() => [...REF_STAGES.filter((s) => all.some((i) => i.refStage === s)), ...[...new Set(all.map((i) => String(i.refStage)))].filter((s) => !REF_STAGES.includes(s))], [all]);
+  const stageNames = useMemo(() => [...REF_STAGES.filter((s) => all.some((i) => i.refStage === s)), ...[...new Set(all.map((i) => String(i.refStage)))].filter((s) => !REF_STAGES.includes(s)).sort()], [all]);
   const categories = useMemo(() => [...new Set(all.filter((i) => !stage || i.refStage === stage).map((i) => String(i.category)))].sort(), [all, stage]);
   const q = query.trim().toLowerCase();
   const shown = all.filter((i) =>
@@ -111,6 +114,12 @@ export default function References() {
         </label>
       </section>
 
+      {setsPresent.length > 1 && (
+        <div className="ref-stages" aria-label="Jeu de références">
+          <button className={"choice" + (refSet === "teaser" ? " on" : "")} onClick={() => { setRefSet("teaser"); setStage(""); setCategory(""); }}>Teaser sélectionné · missions <small>{everything.filter((i) => i.refSet === "teaser").length}</small></button>
+          <button className={"choice" + (refSet === "resolve" ? " on" : "")} onClick={() => { setRefSet("resolve"); setStage(""); setCategory(""); }}>Références Resolve · étapes <small>{everything.filter((i) => (i.refSet ?? "resolve") === "resolve").length}</small></button>
+        </div>
+      )}
       <div className="ref-stages" role="tablist" aria-label="Étapes">
         <button className={"choice" + (!stage ? " on" : "")} onClick={() => { setStage(""); setCategory(""); }}>Toutes <small>{global.done}/{global.total}</small></button>
         {stageNames.map((s) => { const pr = refProgress(all.filter((i) => i.refStage === s)); return (
@@ -200,7 +209,7 @@ function RefViewer({ item, media, team, onClose, setStatusOf, setField, ids, onN
     <Sheet title={String(item.title)} onClose={onClose}>
       <div className="ref-viewer">
         <div className="ref-player">
-          {clip ? <RotatableVideo key={clip.id} media={clip} /> : <p className="muted">Aperçu indisponible.</p>}
+          {clip ? (clip.type.startsWith("image/") ? <Thumb media={clip} className="ref-still" full /> : <RotatableVideo key={clip.id} media={clip} />) : <p className="muted">Aperçu indisponible.</p>}
           <div className="ref-player-tools">
             <button className="btn small" disabled={idx <= 0} onClick={() => onNav(ids[idx - 1])}>← Précédent</button>
             <button className="btn small" disabled={idx < 0 || idx >= ids.length - 1} onClick={() => onNav(ids[idx + 1])}>Suivant →</button>

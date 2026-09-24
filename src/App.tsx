@@ -52,6 +52,7 @@ import Sde from "./screens/Sde";
 import Teaser from "./screens/Teaser";
 import Library from "./screens/Library";
 import References from "./screens/References";
+import SeedLoader from "./screens/SeedLoader";
 import InspirationLibrary from "./screens/InspirationLibrary";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
@@ -214,9 +215,10 @@ function Shell() {
   }, [undo, redo]);
 
   const [, section, arg] = route.split("/");
-  const free = ["accueil", "tournages", "plus", "presets", "sync", "fichiers", "bibliotheque", ""];
+  const free = ["accueil", "tournages", "plus", "presets", "sync", "fichiers", "bibliotheque", "charger", ""];
   let screen;
-  if (!project && !["sync", "fichiers", "presets"].includes(section)) screen = <Welcome />;
+  if (section === "charger") screen = <SeedLoader />;
+  else if (!project && !["sync", "fichiers", "presets"].includes(section)) screen = <Welcome />;
   else if (!project && !free.includes(section)) screen = <Welcome />;
   else
     switch (section) {
