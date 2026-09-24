@@ -1,13 +1,14 @@
 import type { Item, Project, Workspace } from "./types";
 import { makeItem, newProject } from "./model";
 import { importMedia } from "./media";
+import { deleteMedia, listMedia } from "./storage";
 
 /** Plan Andy & Maeva embarqué dans le site : poses photo, missions du teaser (vignettes) et références Resolve. Chargé à la demande (#/charger/andy-maeva[/photo]). */
 const BASE = "seed/andy-maeva-7k2q/";
 interface SeqClip { code: string; mission: string; folder: string; rank: number; n: number; dur: number; old: string; must: boolean; thumb: string }
 interface RefClip { code: string; index: number; title: string; stage: string; category: string; subject?: string; description?: string; movement?: string; framing?: string; effect?: string; drone?: boolean; priority: string; tags?: string; analysis_confidence?: string; source_video?: string; source_in?: string; source_out?: string; duration_s?: number; thumb: string }
 interface PoseSeed { id: string; title: string; section: string; subject: string; person: string; framing: string; favorite: boolean; essential: boolean; notes: string; images: string[] }
-interface Plan { couple: string; sequence: SeqClip[]; refs: RefClip[]; poses?: PoseSeed[] }
+interface Plan { couple: string; sequence: SeqClip[]; refs: RefClip[]; poses?: PoseSeed[]; poseSections?: { title: string; order: number; parent?: string; hidden?: boolean }[] }
 const POSE_ORDER = ["Choix de Maeva ★", "Préparatifs mariée", "Accessoires & détails", "Demoiselles d’honneur", "Préparatifs marié", "Garçons d’honneur", "Cortège", "Cérémonie", "Couple", "Photos de groupe", "Vin d'honneur", "Réception & détails", "Entrées", "Danse & soirée", "Gâteau"];
 
 const fileFrom = async (path: string, name: string) => {
@@ -41,17 +42,25 @@ export async function loadAndyMaevaPlan(w: Workspace, part: SeedPart, progress: 
   const has = (prefix: string) => p.items.some((i) => String(i.packKey ?? "").startsWith(prefix));
   const jobs: { item: Item; path: string; name: string }[] = [];
   const fresh: Item[] = [];
-  if (part === "photo" && plan.poses?.length && !has("seed-pose:")) {
+  if (part === "photo" && plan.poses?.length && !has("seed-pose2:")) {
+    // Ancienne version du chargement (avec des poses masquées) : on la remplace proprement.
+    const old = new Set(p.items.filter((i) => String(i.packKey ?? "").startsWith("seed-pose:")).map((i) => i.id));
+    if (old.size) {
+      for (const m of await listMedia(p.id)) if (old.has(m.itemId)) await deleteMedia(m.id);
+      p.items = p.items.filter((i) => !old.has(i.id));
+    }
     plan.poses.forEach((pose, n) => {
       const item = makeItem("poses", pose.title, {
-        order: n, category: pose.section, subjectGroup: pose.subject, packKey: "seed-pose:" + pose.id,
+        order: n, category: pose.section, subjectGroup: pose.subject, packKey: "seed-pose2:" + pose.id,
         ...(pose.person ? { person: pose.person } : {}), ...(pose.framing ? { framing: pose.framing } : {}),
         ...(pose.favorite ? { favorite: true } : {}), ...(pose.essential ? { priority: "MUST HAVE" } : {}), notes: pose.notes && !pose.notes.startsWith("Référence") ? pose.notes : "",
       });
       pose.images.forEach((img, k) => jobs.push({ item, path: img, name: `${pose.id}-${k + 1}.jpg` }));
       fresh.push(item);
     });
-    p.poseSections = POSE_ORDER.filter((t) => plan.poses!.some((x) => x.section === t)).map((title, order) => ({ id: crypto.randomUUID(), title, order }));
+    const defs: { title: string; order: number; parent?: string }[] = (plan.poseSections ?? POSE_ORDER.map((title, order) => ({ title, order }))).filter((d) => plan.poses!.some((x) => x.section === d.title) || (plan.poseSections ?? []).some((c) => c.parent === d.title));
+    const ids = new Map(defs.map((d) => [d.title, crypto.randomUUID()]));
+    p.poseSections = defs.map((d) => ({ id: ids.get(d.title)!, title: d.title, order: d.order, ...(d.parent && ids.get(d.parent) ? { parentId: ids.get(d.parent) } : {}) }));
   }
   if (part === "video" && !has("seed:")) {
     plan.sequence.forEach((c) => {
