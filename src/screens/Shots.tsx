@@ -1,6 +1,7 @@
+import { groupSimilar, mediaHash } from "../similar";
 import FloatDock from "./FloatDock";
 import { Unlink } from "lucide-react";
-import { useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
 import type { ShotSection } from "../types";
@@ -48,6 +49,11 @@ export default function Shots() {
   const [showHiddenSections, setShowHiddenSections] = useState(false);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
+  const [simBusy, setSimBusy] = useState(false);
+  const [simLevel, setSimLevel] = useState(() => { try { return Number(localStorage.getItem("visionnary-sim-level")) || 14; } catch { return 14; } });
+  const [simAcross, setSimAcross] = useState(false);
+  const hashes = useRef(new Map<string, string>());
   const [picked, setPicked] = useState<string[]>([]);
   const media = useMedia(p.id);
   const importer = useImporter();
@@ -174,6 +180,31 @@ export default function Shots() {
     }
     if (draggedId !== section) moveSectionTo(draggedId, section);
   };
+  /** Regroupe en séries les vidéos (et photos) de plans qui se ressemblent. */
+  async function groupSimilarShots() {
+    if (simBusy) return;
+    setSimBusy(true);
+    try {
+      const singles = active.filter((i) => !i.mergedInto && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m);
+      const buckets = new Map<string, typeof singles>();
+      for (const x of singles) { const k = simAcross ? "*" : sectionOf(x.item); buckets.set(k, [...(buckets.get(k) ?? []), x]); }
+      const groups: string[][] = [];
+      for (const list of buckets.values()) {
+        const map = new Map<string, string>();
+        for (const { item, m } of list) {
+          let h = hashes.current.get(m.id) ?? null;
+          if (!h) { h = await mediaHash(m); if (h) hashes.current.set(m.id, h); }
+          if (h) map.set(item.id, h);
+        }
+        groups.push(...groupSimilar(map, simLevel));
+      }
+      if (!groups.length) return notify(`Aucun plan similaire parmi ${singles.length} analysés — essayez « Large ».`);
+      if (!window.confirm(`${groups.length} groupe(s) de plans similaires trouvé(s) (${groups.reduce((n, g) => n + g.length, 0)} éléments). Les regrouper en séries d'angles ? (annulable)`)) return;
+      let items = p.items;
+      for (const g of groups) items = mergeIntoSeries(items, g[0], g.slice(1)) ?? items;
+      update({ ...p, items }, `${groups.length} série(s) créée(s) à partir de plans similaires`);
+    } finally { setSimBusy(false); }
+  }
   const dragShot = usePointerReorder({ onDropTile: dropShotOnShot, onDropSection: dropOnSectionPointer, groupOf: (id) => (selectMode && picked.includes(id) ? picked : [id]) });
   const isInternalDrag = (event: DragEvent<HTMLElement>) => Array.from(event.dataTransfer.types).some((type) => type === shotDragType || type === sectionDragType);
   const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
@@ -334,10 +365,24 @@ export default function Shots() {
             <button className="btn small" onClick={() => setConfirmLoad(true)}><Sparkles size={16} /> Trame de mariage</button>
           </div>
         </details>
+        <button className={"btn small" + (simOpen ? " gold" : "")} aria-pressed={simOpen} onClick={() => setSimOpen(!simOpen)} title="Regrouper les plans qui se ressemblent"><Layers size={16} /> Similaires</button>
         <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>
       </div>
       <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
+      {simOpen && (
+        <div className="card sim-panel">
+          <strong>Regrouper les plans qui se ressemblent</strong>
+          <p className="muted">Même angle ou même plan, avec un petit changement. Vous pourrez tout modifier ensuite, et annuler d'un clic.</p>
+          <div className="choices">
+            {([[8, "Strict"], [14, "Moyen"], [20, "Large"]] as const).map(([v, label]) => (
+              <button key={v} type="button" className={"choice" + (simLevel === v ? " on" : "")} onClick={() => { setSimLevel(v); try { localStorage.setItem("visionnary-sim-level", String(v)); } catch { /* non mémorisé */ } }}>{label}</button>
+            ))}
+          </div>
+          <label className="sim-auto"><input type="checkbox" checked={simAcross} onChange={(e) => setSimAcross(e.target.checked)} /> Comparer aussi entre les sections</label>
+          <button className="btn gold full" disabled={simBusy} onClick={() => void groupSimilarShots()}>{simBusy ? "Analyse en cours…" : "Analyser et regrouper"}</button>
+        </div>
+      )}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
@@ -404,9 +449,10 @@ export default function Shots() {
               </div>
               {!sectionConfig?.collapsed && <div className="insp-grid">
                 {list.map((i) => (
-                  <div key={i.id} className="shot-draggable" data-reorder={i.id} data-merge="">
+                  <div key={i.id} className="shot-draggable" data-reorder={i.id} data-merge="" onClickCapture={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey) { event.preventDefault(); event.stopPropagation(); setSelectMode(true); setPicked((current) => (current.includes(i.id) ? current.filter((x) => x !== i.id) : [...current, i.id])); } }}>
                   <span className="shot-card-grip" role="button" tabIndex={0} title={`Glisser « ${i.title} » vers une autre place ou une autre section`} onPointerDown={(event) => dragShot(event, i.id)}><GripVertical size={13} /> Déplacer</span>
                   {(() => { const series = seriesMedia(media, i); const taken = series.filter((m) => doneAngles(i).has(m.id)).length; return series.length > 1 ? <span className={"pose-angles" + (taken === series.length ? " is-complete" : "")} title={`${series.length} angles · ${taken} pris`}><Layers size={13} /> {taken ? `${taken}/${series.length}` : series.length}</span> : null; })()}
+                  {String(i.includes ?? "") && <button type="button" className="pose-ungroup" aria-label="Dégrouper : faire ressortir les vidéos" title="Dégrouper : faire ressortir les vidéos" onClick={() => update({ ...p, items: dissolveSeries(p.items, [i.id]) }, "Série dégroupée : les vidéos ressortent")}><Unlink size={13} /></button>}
                   {selectMode && <button type="button" className="pose-select" aria-pressed={picked.includes(i.id)} aria-label={`Cocher ${i.title}`} onClick={() => setPicked((current) => (current.includes(i.id) ? current.filter((x) => x !== i.id) : [...current, i.id]))}>{picked.includes(i.id) ? <Check size={18} /> : null}</button>}
                   <MediaCard
                     item={i}

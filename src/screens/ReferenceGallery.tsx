@@ -6,13 +6,10 @@ import { importMedia } from '../media';
 import { putMedia } from '../storage';
 import { mediaChanged, Thumb } from '../ui';
 import { mediaFor, VideoPreview } from './common';
-import { detachFromSeries, doneAngles, seriesMedia, toggleAngle } from '../merge';
+import { detachFromSeries, doneAngles, seriesMedia, toggleAngle, viewStyle } from '../merge';
 import { usePointerReorder } from '../reorder';
 import { PickFiles } from './MediaDrop';
 import './references.css';
-
-/** Style de cadrage d'un média : zoom autour d'un centre, appliqué à un conteneur qui masque le débordement. */
-export const viewStyle = (m?: MediaEntry) => (m?.view && m.view.z > 1 ? { transform: `scale(${m.view.z})`, transformOrigin: `${m.view.x}% ${m.view.y}%` } : undefined);
 
 export function referencesFor(media: MediaEntry[], item: Item) {
   const own = seriesMedia(media, item);

@@ -4,6 +4,7 @@ import type { Item, MediaEntry, ModuleId, Project } from "../types";
 import { done, framingCode, makeItem, moduleById, priorities, shotSections, statuses, uid, type Field } from "../model";
 import { shotKind } from "../stageStats";
 import { useProject } from "../store";
+import { viewStyle } from "../merge";
 import { MediaManager, MediaViewer, Sheet, useMedia, useObjectUrl, Thumb } from "../ui";
 import FramingPicto from "./FramingPicto";
 import { appendInterviewQuestions, interviewTypes } from "../interviews";
@@ -258,7 +259,7 @@ export function MediaCard({
     <div className={"insp-card" + (isShot && done(item) ? " is-done" : "") + (isShot && skippedShot(item) ? " is-skipped" : "")}>
       <button type="button" className="insp-media" onClick={onView} aria-label={(isVideo ? "Lire " : "Voir ") + (item.title || "l’élément")}>
         {thumb ? (
-          <Thumb media={thumb} className="insp-thumb" animate={animate} />
+          <span className="pose-zoom" style={viewStyle(thumb)}><Thumb media={thumb} className="insp-thumb" animate={animate} /></span>
         ) : isShot && framingCode(item.framing) ? (
           <span className="insp-empty has-picto">
             <FramingPicto framing={item.framing} who={item.person || item.subject} orientation={item.orientation} />

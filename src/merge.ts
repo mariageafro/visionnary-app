@@ -79,3 +79,6 @@ export function dissolveSeries(items: Item[], targetIds: string[]): Item[] {
     return item;
   });
 }
+
+/** Style de cadrage d'un média : zoom autour d'un centre, à appliquer à un conteneur qui masque le débordement. */
+export const viewStyle = (m?: MediaEntry) => (m?.view && m.view.z > 1 ? { transform: `scale(${m.view.z})`, transformOrigin: `${m.view.x}% ${m.view.y}%` } : undefined);

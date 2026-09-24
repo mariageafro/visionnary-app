@@ -1,6 +1,6 @@
 import QuickStatus from "./QuickStatus";
 import "./missions.css";
-import ReferenceGallery, { viewStyle } from "./ReferenceGallery";
+import ReferenceGallery from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
 import { Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
@@ -12,7 +12,7 @@ import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
-import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
+import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
 import { Empty, MediaViewer, Screen, Thumb, navigate, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
 import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";

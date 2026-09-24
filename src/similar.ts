@@ -53,3 +53,40 @@ export async function imageHash(blob: Blob): Promise<string | null> {
     return null;
   }
 }
+
+/** Empreinte d'un média : l'image elle-même, ou pour une vidéo son aperçu (à défaut une image prise à 0,5 s). */
+export async function mediaHash(m: { type: string; blob: Blob; thumbnail?: Blob }): Promise<string | null> {
+  if (m.type.startsWith("image/")) return imageHash(m.thumbnail ?? m.blob);
+  if (m.thumbnail) {
+    const h = await imageHash(m.thumbnail);
+    if (h) return h;
+  }
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(m.blob);
+    const video = document.createElement("video");
+    const done = (h: string | null) => {
+      URL.revokeObjectURL(url);
+      resolve(h);
+    };
+    video.muted = true;
+    video.preload = "auto";
+    video.onerror = () => done(null);
+    video.onloadeddata = () => {
+      video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+    };
+    video.onseeked = async () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = 64;
+        c.height = 64;
+        c.getContext("2d")?.drawImage(video, 0, 0, 64, 64);
+        const blob = await new Promise<Blob | null>((r) => c.toBlob(r));
+        done(blob ? await imageHash(blob) : null);
+      } catch {
+        done(null);
+      }
+    };
+    video.src = url;
+    setTimeout(() => done(null), 8000);
+  });
+}
