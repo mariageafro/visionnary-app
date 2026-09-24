@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { Camera, Grid2X2, Heart, List as ListIcon, MapPin, Plus, Search } from "lucide-react";
+import { Camera, Grid2X2, GripVertical, Heart, List as ListIcon, MapPin, Plus, Search } from "lucide-react";
 import type { Item, ModuleId } from "../types";
 import { done, makeItem, moduleById } from "../model";
 import { useProject } from "../store";
+import { reorderOnDrop, usePointerReorder } from "../reorder";
 import { Empty, Row, Screen, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, QuickView, titleOf } from "./common";
 
@@ -17,7 +18,7 @@ const subtitleFor = (i: Item) => (i.module === "venues" ? String(i.address ?? ""
 
 /** Écran générique : couvre tous les modules qui n'ont pas d'écran dédié (matériel, lieux, audio…). */
 export default function ModuleScreen({ moduleId }: { moduleId: string }) {
-  const { project: p } = useProject();
+  const { project: p, update } = useProject();
   const m = moduleById(moduleId)!;
   const [filter, setFilter] = useState<"all" | "todo" | "must" | "done">("all");
   const [query, setQuery] = useState("");
@@ -32,6 +33,13 @@ export default function ModuleScreen({ moduleId }: { moduleId: string }) {
       (filter === "all" ? i.status !== "archivé" : filter === "todo" ? !done(i) && i.status !== "archivé" : filter === "must" ? i.priority === "MUST HAVE" : done(i)) &&
       (i.title + " " + i.notes).toLowerCase().includes(query.toLowerCase()),
   );
+  const dragItem = usePointerReorder({
+    onDropTile: (draggedId, targetId) => {
+      const result = reorderOnDrop(items, draggedId, targetId);
+      if (result) update({ ...p, items: p.items.map((entry) => (result.orders.has(entry.id) ? { ...entry, order: result.orders.get(entry.id)! } : entry)) }, "Ordre modifié");
+    },
+  });
+  const grip = (i: Item) => <span className="shot-card-grip" role="button" tabIndex={0} title={`Glisser « ${i.title || "élément"} » pour changer sa place`} onPointerDown={(event) => dragItem(event, i.id)}><GripVertical size={13} /> Déplacer</span>;
   const add = () => setEditing(makeItem(m.id, "", { order: nextOrder(p, m.id) }));
   return (
     <Screen
@@ -71,8 +79,9 @@ export default function ModuleScreen({ moduleId }: { moduleId: string }) {
         layout === "grid" ? (
           <div className="insp-grid">
             {items.map((i) => (
+              <div key={i.id} className="shot-draggable" data-reorder={i.id}>
+              {grip(i)}
               <MediaCard
-                key={i.id}
                 item={i}
                 thumb={mediaFor(media, i)}
                 subtitle={subtitleFor(i)}
@@ -80,19 +89,22 @@ export default function ModuleScreen({ moduleId }: { moduleId: string }) {
                 onView={() => setViewing(i)}
                 onEdit={() => setEditing(i)}
               />
+              </div>
             ))}
           </div>
         ) : (
           <div className="list">
             {items.map((i) => (
+              <div key={i.id} className="shot-draggable" data-reorder={i.id}>
+              {grip(i)}
               <Row
-                key={i.id}
                 done={done(i)}
                 title={i.title || "Sans titre"}
                 sub={[i.category, i.role, i.address, i.model, titleOf(p, i.operatorId), titleOf(p, i.stageId), i.notes].filter(Boolean).join(" · ") || undefined}
                 trail={i.priority === "MUST HAVE" ? <span className="chip red">MUST</span> : i.status !== "prévu" ? <span className="chip outline">{i.status}</span> : undefined}
                 onClick={() => setEditing(i)}
               />
+              </div>
             ))}
           </div>
         )

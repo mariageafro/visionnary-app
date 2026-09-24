@@ -7,6 +7,7 @@ import { isDroneShot, isPhotoShot, isVideoShot } from "../stageStats";
 import { withOrder } from "../features";
 import { linkShotsToStages, professionalShotList, shotListCount } from "../shotlist";
 import { useProject } from "../store";
+import { reorderOnDrop, usePointerReorder } from "../reorder";
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
 import { matchesShotSearch } from "../shotSearch";
@@ -143,6 +144,25 @@ export default function Shots() {
     const destination = siblings[index + delta];
     if (destination) moveSectionTo(section, destination);
   };
+  // Glisser aux pointeurs (souris, doigt, stylet) : un plan sur un autre plan ou une section, ou une section sur une autre.
+  const dropShotOnShot = (draggedId: string, targetId: string) => {
+    const dragged = all.find((item) => item.id === draggedId);
+    const target = all.find((item) => item.id === targetId);
+    if (!dragged || !target) return;
+    const list = items.filter((item) => sectionOf(item) === sectionOf(target));
+    const result = reorderOnDrop(list, draggedId, targetId, dragged);
+    if (!result) return;
+    update({ ...p, items: p.items.map((item) => (result.orders.has(item.id) ? { ...item, order: result.orders.get(item.id)!, ...(item.id === draggedId && result.crossed ? { section: sectionOf(target) } : {}) } : item)) }, result.crossed ? `Plan déplacé vers « ${sectionOf(target)} »` : "Ordre des plans modifié");
+  };
+  const dropOnSectionPointer = (draggedId: string, section: string) => {
+    const shot = all.find((item) => item.id === draggedId);
+    if (shot) {
+      if (sectionOf(shot) !== section) patchItem(draggedId, { section }, `Plan déplacé vers « ${section} »`);
+      return;
+    }
+    if (draggedId !== section) moveSectionTo(draggedId, section);
+  };
+  const dragShot = usePointerReorder({ onDropTile: dropShotOnShot, onDropSection: dropOnSectionPointer });
   const isInternalDrag = (event: DragEvent<HTMLElement>) => Array.from(event.dataTransfer.types).some((type) => type === shotDragType || type === sectionDragType);
   const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
     event.preventDefault();
@@ -318,13 +338,14 @@ export default function Shots() {
           return (
             <section
               key={section}
+              data-reorder-section={section}
               className={"shot-section-drop" + (dragTarget === section ? " is-drop-target" : "")}
               onDragOver={(event) => { if (isInternalDrag(event) || Array.from(event.dataTransfer.types).includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = isInternalDrag(event) ? "move" : "copy"; setDragTarget(section); } }}
               onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(null); }}
               onDrop={(event) => dropOnSection(event, section)}
             >
               <div className="section-title">
-                <span className="shot-section-grip" draggable title={"Glisser pour réordonner « " + section + " »"} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(sectionDragType, section); }} onDragEnd={() => setDragTarget(null)}><GripVertical size={16} /></span>
+                <span className="shot-section-grip" role="button" tabIndex={0} title={"Glisser pour réordonner « " + section + " »"} onPointerDown={(event) => dragShot(event, section)}><GripVertical size={16} /></span>
                 <button className="icon-btn small" aria-label={`${sectionConfig?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => toggleCollapsed(section)}>{sectionConfig?.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button>
                 <span>{section}</span>
                 <span>
@@ -347,6 +368,7 @@ export default function Shots() {
                 {(sectionConfig ? sectionTitles(sectionConfig.id) : []).map((child) => <button
                   className={"btn small" + (dragTarget === child.title ? " is-drop-target" : "")}
                   key={child.id}
+                  data-reorder-section={child.title}
                   onClick={() => setSectionActions(child.title)}
                   onDragOver={(event) => { if (Array.from(event.dataTransfer.types).includes(shotDragType)) { event.preventDefault(); event.stopPropagation(); setDragTarget(child.title); } }}
                   onDrop={(event) => dropOnSection(event, child.title)}
@@ -354,8 +376,8 @@ export default function Shots() {
               </div>
               {!sectionConfig?.collapsed && <div className="insp-grid">
                 {list.map((i) => (
-                  <div key={i.id} className="shot-draggable">
-                  <span className="shot-card-grip" draggable title={`Glisser « ${i.title} » vers une section`} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(shotDragType, i.id); }} onDragEnd={() => setDragTarget(null)}><GripVertical size={13} /> Déplacer</span>
+                  <div key={i.id} className="shot-draggable" data-reorder={i.id}>
+                  <span className="shot-card-grip" role="button" tabIndex={0} title={`Glisser « ${i.title} » vers une autre place ou une autre section`} onPointerDown={(event) => dragShot(event, i.id)}><GripVertical size={13} /> Déplacer</span>
                   <MediaCard
                     item={i}
                     animate={motion}

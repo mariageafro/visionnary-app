@@ -8,6 +8,7 @@ import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
+import { reorderOnDrop, usePointerReorder } from "../reorder";
 import { Empty, MediaViewer, Screen, Thumb, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
 import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
@@ -41,7 +42,6 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [renaming, setRenaming] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
   const [dragTarget, setDragTarget] = useState("");
-  const [overId, setOverId] = useState("");
   const [photoGuide, setPhotoGuide] = useState(p.operatorGuide?.photo ?? operatorGuides.photo.tips.join("\n"));
   const queueImport = (files: File[], category = "", essential = false) => { setPendingCategory(category); setPendingEssential(essential); setPending(files); };
   const dragging = useFileDrop((files) => queueImport(files), !embedded);
@@ -101,26 +101,21 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     if (section === "À faire absolument") patchItem(id, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else patchItem(id, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
   };
-  // Glisser une pose sur une autre : elle prend sa place (vers la droite/le bas elle passe après, sinon avant),
-  // dans la même section comme d'une section à l'autre. Un seul pas d'historique, sans toucher aux autres poses.
-  const dropOnTile = (event: DragEvent<HTMLElement>, target: Item, list: Item[]) => {
-    if (!Array.from(event.dataTransfer.types).includes(poseDragType)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    setOverId("");
-    setDragTarget("");
-    const id = event.dataTransfer.getData(poseDragType);
-    const dragged = all.find((i) => i.id === id) ?? p.items.find((i) => i.id === id);
-    if (!dragged || dragged.id === target.id) return;
-    const from = list.findIndex((i) => i.id === dragged.id);
-    const rest = list.filter((i) => i.id !== dragged.id);
-    const at = rest.findIndex((i) => i.id === target.id);
-    const inserted = [...rest.slice(0, at + (from >= 0 && from < list.findIndex((i) => i.id === target.id) ? 1 : 0)), dragged, ...rest.slice(at + (from >= 0 && from < list.findIndex((i) => i.id === target.id) ? 1 : 0))];
-    const slots = inserted.map((i) => i.order).sort((a, b) => a - b);
-    const newOrder = new Map(inserted.map((i, n) => [i.id, slots[n]]));
-    const category = target.category;
-    update({ ...p, items: p.items.map((i) => (newOrder.has(i.id) ? { ...i, order: newOrder.get(i.id)!, ...(i.id === dragged.id && from < 0 ? { category } : {}) } : i)) }, from >= 0 ? "Ordre des poses modifié" : `Pose déplacée vers « ${categoryOf(target)} »`);
+  // Glisser une pose (poignée) sur une autre vignette ou une section : souris, doigt ou stylet.
+  const dropOnPose = (draggedId: string, targetId: string) => {
+    const list = sections.map(([, l]) => l).find((l) => l.some((i) => i.id === targetId));
+    const target = list?.find((i) => i.id === targetId);
+    const dragged = p.items.find((i) => i.id === draggedId && i.module === "poses");
+    if (!list || !target || !dragged) return;
+    const result = reorderOnDrop(list, draggedId, targetId, dragged);
+    if (!result) return;
+    update({ ...p, items: p.items.map((i) => (result.orders.has(i.id) ? { ...i, order: result.orders.get(i.id)!, ...(i.id === draggedId && result.crossed && !["À faire absolument", "Masquées"].includes(String(target.category ?? "")) ? { category: target.category } : {}) } : i)) }, result.crossed ? `Pose déplacée vers « ${categoryOf(target)} »` : "Ordre des poses modifié");
   };
+  const dropPoseOnSection = (draggedId: string, section: string) => {
+    if (section === "À faire absolument") patchItem(draggedId, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
+    else if (section !== "Masquées") patchItem(draggedId, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
+  };
+  const dragPose = usePointerReorder({ onDropTile: dropOnPose, onDropSection: dropPoseOnSection });
   // Réordonner : on échange l'ordre avec la voisine de la même section, sans toucher aux autres.
   const move = (list: Item[], item: Item, step: number) => {
     const at = list.findIndex((i) => i.id === item.id);
@@ -200,7 +195,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
 
       {sections.length ? (
         sections.map(([section, list]) => (
-          <section key={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
+          <section key={section} data-reorder-section={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
             <div className="section-title pose-section-head">
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{section}</strong>}
@@ -223,7 +218,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 const op = operators.get(String(pose.operatorId));
                 const isVideo = thumb?.type.startsWith("video/");
                 return (
-                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "") + (overId === pose.id ? " is-over" : "")} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).includes(poseDragType)) { event.preventDefault(); event.stopPropagation(); if (overId !== pose.id) setOverId(pose.id); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOverId(""); }} onDrop={(event) => dropOnTile(event, pose, list)}>
+                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")} data-reorder={pose.id}>
                     <button type="button" className="pose-media" onClick={() => setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) })} aria-label={"Voir la pose " + (pose.title || "")}>
                       <span className="pose-frame">
                         {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}
@@ -249,7 +244,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                       <Star size={15} fill={pose.favorite === true ? "currentColor" : "none"} />
                     </button>
                     <button type="button" className="pose-essential" aria-pressed={pose.priority === "MUST HAVE"} aria-label={pose.priority === "MUST HAVE" ? "Retirer des essentiels photo" : "Marquer essentiel photo"} onClick={() => patchItem(pose.id, { priority: pose.priority === "MUST HAVE" ? "IMPORTANT" : "MUST HAVE" })}>Essentiel</button>
-                    <span className="pose-drag" draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData(poseDragType, pose.id); }} onDragEnd={() => setDragTarget("")} title={`Glisser « ${pose.title} » vers une autre section`} aria-label={`Déplacer ${pose.title} à la souris`}><GripVertical size={16} /></span>
+                    <span className="pose-drag" role="button" tabIndex={0} onPointerDown={(event) => dragPose(event, pose.id)} title={`Glisser « ${pose.title} » vers une autre place ou une autre section`} aria-label={`Déplacer ${pose.title} : glisser vers une autre photo ou une autre section`}><GripVertical size={16} /></span>
                     <QuickStatus item={pose}/>
                     {reorder && (
                       <div className="pose-move">

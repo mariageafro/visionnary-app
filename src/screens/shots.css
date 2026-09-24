@@ -24,9 +24,9 @@
 .shot-section-drop.is-drop-target,.section-tools .is-drop-target{outline-color:var(--gold)}
 .shot-section-grip{display:inline-flex;align-items:center;justify-content:center;color:var(--text-2);cursor:grab}
 .shot-section-grip:active,.shot-card-grip:active{cursor:grabbing}
-.shot-draggable{min-width:0}
+.shot-draggable{min-width:0;position:relative}
 .shot-card-grip{display:inline-flex;align-items:center;gap:2px;min-height:24px;padding:0 4px;color:var(--text-2);font-size:11px;cursor:grab;user-select:none}
-@media (pointer:coarse){.shot-card-grip{display:none}}
+@media (pointer:coarse){.shot-card-grip{min-height:36px;padding:0 10px;font-size:13px}}
 .shot-section-empty{min-height:60px;padding:16px 8px}
 
 .shot-extra-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }

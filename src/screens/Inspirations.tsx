@@ -3,6 +3,8 @@ import { Images, Plus, Search, Scissors } from "lucide-react";
 import type { Item } from "../types";
 import { makeItem } from "../model";
 import { useProject } from "../store";
+import { reorderOnDrop, usePointerReorder } from "../reorder";
+import { GripVertical } from "lucide-react";
 import { Empty, Screen, Sheet, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, QuickView } from "./common";
 
@@ -71,7 +73,7 @@ function SegmentsEditor({ item, mediaId, duration, onClose }: { item: Item; medi
 
 /** Galerie d'inspirations : catégories, vidéos jouables d'un tap, transformation en plan. */
 export default function Inspirations() {
-  const { project: p, addItems } = useProject();
+  const { project: p, addItems, update } = useProject();
   const [category, setCategory] = useState("Toutes");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Item | null>(null);
@@ -83,6 +85,12 @@ export default function Inspirations() {
   const items = all.filter(
     (i) => (category === "Toutes" || String(i.category || "Sans catégorie") === category) && (i.title + " " + i.tags + " " + i.notes).toLowerCase().includes(query.toLowerCase()),
   );
+  const dragInspiration = usePointerReorder({
+    onDropTile: (draggedId, targetId) => {
+      const result = reorderOnDrop(items, draggedId, targetId);
+      if (result) update({ ...p, items: p.items.map((entry) => (result.orders.has(entry.id) ? { ...entry, order: result.orders.get(entry.id)! } : entry)) }, "Ordre des inspirations modifié");
+    },
+  });
   const withVideo = all.filter((i) => mediaFor(media, i)?.type.startsWith("video/")).length;
   const add = () => setEditing(makeItem("inspirations", "", { order: nextOrder(p, "inspirations"), category: category === "Toutes" ? undefined : category }));
   const transform = (i: Item) => {
@@ -128,7 +136,8 @@ export default function Inspirations() {
       {items.length ? (
         <div className="insp-grid">
           {items.map((i) => (
-            <div key={i.id} className="stack">
+            <div key={i.id} className="stack shot-draggable" data-reorder={i.id}>
+            <span className="shot-card-grip" role="button" tabIndex={0} title={`Glisser « ${i.title} » pour changer sa place`} onPointerDown={(event) => dragInspiration(event, i.id)}><GripVertical size={13} /> Déplacer</span>
             <MediaCard
               item={i}
               thumb={mediaFor(media, i)}
