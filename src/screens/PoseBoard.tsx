@@ -9,7 +9,7 @@ import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, 
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
-import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
+import { addPoseSection, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
@@ -141,6 +141,10 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     update({ ...p, items: p.items.map((i) => (result.orders.has(i.id) ? { ...i, order: result.orders.get(i.id)!, ...(i.id === draggedId && result.crossed && !["À faire absolument", "Masquées"].includes(String(target.category ?? "")) ? { category: target.category } : {}) } : i)) }, result.crossed ? `Pose déplacée vers « ${categoryOf(target)} »` : "Ordre des poses modifié");
   };
   const dropPoseOnSection = (draggedId: string, section: string) => {
+    if (!p.items.some((i) => i.id === draggedId)) {
+      if (draggedId !== section && section !== "À faire absolument" && section !== "Masquées") update(movePoseSectionTo(p, draggedId, section), "Sections photo réordonnées");
+      return;
+    }
     if (section === "À faire absolument") patchItem(draggedId, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else if (section !== "Masquées") patchItem(draggedId, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
   };
@@ -292,6 +296,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         sections.map(([section, list]) => (
           <section key={section} data-reorder-section={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
             <div className="section-title pose-section-head">
+              {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{section}</strong>}
@@ -303,6 +308,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                   <button className="icon-btn small" aria-label={`Renommer ${section}`} onClick={() => { setRenaming(section); setRenameDraft(section); }}><Pencil size={15} /></button>
                   <button className="icon-btn small" aria-label={`Dupliquer ${section}`} onClick={() => duplicateSection(section)}><Copy size={15} /></button>
                   <button className="icon-btn small" aria-label={`Monter ${section}`} disabled={categories.indexOf(section) <= 0} onClick={() => update(movePoseSection(p, section, -1), "Sections photo réordonnées")}>↑</button>
+                  <button className="icon-btn small" aria-label={`${section} en première place`} title="Tout en haut" disabled={categories.indexOf(section) <= 0} onClick={() => update(movePoseSectionTo(p, section, "start"), "Section placée en premier")}>⤒</button>
+                  <button className="icon-btn small" aria-label={`${section} en dernière place`} title="Tout en bas" disabled={categories.indexOf(section) >= categories.length - 1} onClick={() => update(movePoseSectionTo(p, section, "end"), "Section placée en dernier")}>⤓</button>
                   <button className="icon-btn small" aria-label={`Descendre ${section}`} disabled={categories.indexOf(section) >= categories.length - 1} onClick={() => update(movePoseSection(p, section, 1), "Sections photo réordonnées")}>↓</button>
                   {section !== "Sans catégorie" && <button className="icon-btn small" aria-label={`Supprimer ${section}`} onClick={() => deleteSection(section)}><Trash2 size={15} /></button>}
                 </>}

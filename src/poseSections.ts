@@ -56,3 +56,17 @@ export function movePoseSection(project: Project, title: string, step: -1 | 1): 
   const poseSections: ShotSection[] = titles.map((name, order) => ({ ...(existing.get(name) ?? { id: crypto.randomUUID(), title: name }), order }));
   return { ...project, poseSections };
 }
+
+/** Place une section à l'emplacement d'une autre : vers le haut elle passe avant, vers le bas après. `destination: "start" | "end"` : tout en haut / tout en bas. */
+export function movePoseSectionTo(project: Project, title: string, destination: string): Project {
+  const titles = poseSectionTitles(project);
+  const from = titles.indexOf(title);
+  if (from < 0 || title === destination) return project;
+  titles.splice(from, 1);
+  const to = destination === "start" ? 0 : destination === "end" ? titles.length : titles.indexOf(destination) + (from < poseSectionTitles(project).indexOf(destination) ? 1 : 0);
+  if (to < 0) return project;
+  titles.splice(to, 0, title);
+  const existing = new Map((project.poseSections ?? []).map((section) => [section.title, section]));
+  const poseSections: ShotSection[] = titles.map((name, order) => ({ ...(existing.get(name) ?? { id: crypto.randomUUID(), title: name }), order }));
+  return { ...project, poseSections };
+}

@@ -63,7 +63,7 @@ export function usePointerReorder(handlers: Handlers) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const source = document.querySelector<HTMLElement>(`[data-reorder="${CSS.escape(id)}"]`);
+    const source = document.querySelector<HTMLElement>(`[data-reorder="${CSS.escape(id)}"]`) ?? (event.currentTarget as HTMLElement | null)?.closest<HTMLElement>(".section-title") ?? null;
     const start = { x: event.clientX, y: event.clientY };
     const ids = latest.current.groupOf?.(id) ?? [id];
     let ghost: HTMLElement | null = null;

@@ -23,3 +23,16 @@ describe("déplacer plusieurs éléments", () => {
     expect([...r.orders].sort((x, y) => x[1] - y[1]).map(([id]) => id)).toEqual(["c", "d", "a", "b", "e"]);
   });
 });
+
+import { movePoseSectionTo } from "../src/poseSections";
+import { newProject, makeItem } from "../src/model";
+describe("ordre des sections photo", () => {
+  it("place une section tout en haut, tout en bas ou à la place d'une autre", () => {
+    const p = { ...newProject("t"), items: ["A", "B", "C", "D"].map((c) => makeItem("poses", c, { category: c })) };
+    const titles = (x: typeof p) => (x.poseSections ?? []).map((s) => s.title);
+    expect(titles(movePoseSectionTo(p, "D", "start"))).toEqual(["D", "A", "B", "C"]);
+    expect(titles(movePoseSectionTo(p, "A", "end"))).toEqual(["B", "C", "D", "A"]);
+    expect(titles(movePoseSectionTo(p, "A", "C"))).toEqual(["B", "C", "A", "D"]);
+    expect(titles(movePoseSectionTo(p, "D", "B"))).toEqual(["A", "D", "B", "C"]);
+  });
+});
