@@ -217,7 +217,7 @@ function Shell() {
   const [, section, arg] = route.split("/");
   const free = ["accueil", "tournages", "plus", "presets", "sync", "fichiers", "bibliotheque", "charger", ""];
   let screen;
-  if (section === "charger") screen = <SeedLoader to={route.split("/")[3] === "photo" ? "/m/poses" : "/m/references"} />;
+  if (section === "charger") screen = <SeedLoader key={route} part={route.split("/")[3] === "photo" ? "photo" : "video"} />;
   else if (!project && !["sync", "fichiers", "presets"].includes(section)) screen = <Welcome />;
   else if (!project && !free.includes(section)) screen = <Welcome />;
   else
