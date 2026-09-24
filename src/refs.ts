@@ -63,6 +63,8 @@ export interface RefManifest {
   project?: string;
   timeline: string;
   type: "couple_reference" | "inspiration_library";
+  /** Jeu de références (ex. « teaser ») : plusieurs manifestes du couple peuvent coexister sans se mélanger. */
+  set?: string;
   clips: RefClip[];
 }
 export function isRefManifest(value: unknown): value is RefManifest {
@@ -100,6 +102,7 @@ export function planRefImport(p: Project, manifest: RefManifest, available: Set<
   let missingFiles = 0;
   for (const clip of manifest.clips) {
     const packKey = `${source}:${manifest.timeline}:${clip.code}`;
+    const refSet = manifest.set ?? "resolve";
     if (known.has(packKey)) {
       alreadyThere++;
       continue;
@@ -115,6 +118,7 @@ export function planRefImport(p: Project, manifest: RefManifest, available: Set<
       item: makeItem("inspirations", clip.title, {
         order: base + items.length,
         refSource: source,
+        refSet,
         refCode: clip.code,
         refStage: clip.stage,
         packKey,
