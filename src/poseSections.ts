@@ -1,4 +1,4 @@
-import type { Item, Project, ShotSection } from "./types";
+import type { Item, Project } from "./types";
 import { poseCategories } from "./model";
 
 const titleOf = (item: Item) => String(item.category || "Sans catégorie");
