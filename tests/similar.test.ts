@@ -58,6 +58,6 @@ describe("avancement d'une section", () => {
   it("compte les prises, ignore les éléments masqués", () => {
     const items = [mk("a", "terminé"), mk("b", "prévu"), mk("c", "archivé"), mk("d", "terminé")];
     const r = progressOf(items, []);
-    expect([r.total, r.taken, r.pct, r.pending.length]).toEqual([3, 2, 67, 1]);
+    expect([r.total, r.taken, r.pct, r.pending.length, r.items.total, r.items.done]).toEqual([3, 2, 67, 1, 3, 2]);
   });
 });

@@ -9,6 +9,10 @@ export interface Progress {
   pct: number;
   /** Éléments qui ont encore au moins une prise à faire. */
   pending: Item[];
+  /** Nombre d'éléments (poses ou plans) au total et terminés (tous leurs angles pris). */
+  items: { total: number; done: number };
+  /** Angles restant à prendre par élément non terminé. */
+  left: Map<string, { taken: number; total: number }>;
 }
 
 /**
@@ -19,6 +23,9 @@ export function progressOf(items: Item[], media: MediaEntry[]): Progress {
   let total = 0;
   let taken = 0;
   const pending: Item[] = [];
+  const left = new Map<string, { taken: number; total: number }>();
+  let itemTotal = 0;
+  let itemDone = 0;
   for (const item of items) {
     if (item.status === "archivé" || item.mergedInto) continue;
     const angles = seriesMedia(media, item).length;
@@ -35,7 +42,12 @@ export function progressOf(items: Item[], media: MediaEntry[]): Progress {
     }
     total += t;
     taken += d;
-    if (d < t) pending.push(item);
+    itemTotal++;
+    if (d >= t) itemDone++;
+    else {
+      pending.push(item);
+      left.set(item.id, { taken: d, total: t });
+    }
   }
-  return { total, taken, pct: total ? Math.round((taken / total) * 100) : 0, pending };
+  return { total, taken, pct: total ? Math.round((taken / total) * 100) : 0, pending, items: { total: itemTotal, done: itemDone }, left };
 }
