@@ -6,7 +6,7 @@ import { importMedia } from '../media';
 import { putMedia } from '../storage';
 import { mediaChanged, Thumb } from '../ui';
 import { mediaFor, VideoPreview } from './common';
-import { detachFromSeries, doneAngles, seriesMedia, toggleAngle, viewStyle } from '../merge';
+import { detachMany, detachFromSeries, doneAngles, seriesMedia, toggleAngle, viewStyle } from '../merge';
 import { usePointerReorder } from '../reorder';
 import { PickFiles } from './MediaDrop';
 import './references.css';
@@ -24,6 +24,8 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const [crop, setCrop] = useState(false);
+  const [outMode, setOutMode] = useState(false);
+  const [out, setOut] = useState<string[]>([]);
   const [draft, setDraft] = useState<{ id: string; z: number; x: number; y: number } | null>(null);
   const pan = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
   const swipe = useRef<{x:number;y:number}|null>(null);
@@ -45,6 +47,12 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
     try { await putMedia({ ...current, view: v.z > 1 ? v : undefined }); mediaChanged(); } catch { notify('Impossible d’enregistrer le cadrage'); }
     setDraft(null);
   };
+  const releaseOwners = (mediaIds: string[]) => {
+    const owners = [...new Set(gallery.filter(m => mediaIds.includes(m.id) && m.itemId !== item.id).map(m => m.itemId))];
+    if (!owners.length) return;
+    update({ ...project, items: detachMany(project.items, item.id, owners) }, owners.length > 1 ? `${owners.length} angles sortis de la série` : 'Angle sorti de la série : il redevient une pose à part');
+    setOut([]); setOutMode(false); setSelected('');
+  };
   const go = (step:number) => { const next=gallery[index+step]; if(next)setSelected(next.id); };
   async function upload(files: File[]) {
     if(busy)return;
@@ -65,10 +73,16 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
       {current&&<span className="reference-count">Angle {index+1} / {gallery.length}{gallery.length>1?` · ${takenCount} pris`:''}</span>}
       {current&&taken.has(current.id)&&<span className="reference-taken"><Check size={14}/> Pris</span>}
     </div>
-    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} data-reorder={m.id} style={{touchAction:'none'}} onPointerDown={e=>{if(gallery.length>1)dragAngle(e,m.id);}} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={taken.has(m.id)?'is-taken':''} onClick={()=>setSelected(m.id)}><Thumb media={m}/><span role="button" aria-label={taken.has(m.id)?`Angle ${n+1} pris`:`Marquer l’angle ${n+1} pris`} className={'reference-tick'+(taken.has(m.id)?' on':'')} onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,m.id,gallery.length):i)},taken.has(m.id)?'Angle remis à faire':'Angle pris');}}><Check size={12}/></span></button>)}</div>}
+    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} data-reorder={m.id} style={{touchAction:'none'}} onPointerDown={e=>{if(gallery.length>1)dragAngle(e,m.id);}} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={(taken.has(m.id)?'is-taken ':'')+(out.includes(m.id)?'is-out':'')} onClick={()=>{if(outMode&&m.itemId!==item.id)setOut(o=>o.includes(m.id)?o.filter(x=>x!==m.id):[...o,m.id]);else setSelected(m.id);}}><Thumb media={m}/><span role="button" aria-label={taken.has(m.id)?`Angle ${n+1} pris`:`Marquer l’angle ${n+1} pris`} className={'reference-tick'+(taken.has(m.id)?' on':'')} onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,m.id,gallery.length):i)},taken.has(m.id)?'Angle remis à faire':'Angle pris');}}><Check size={12}/></span></button>)}</div>}
     {current&&<div className="reference-crop">
       <button className={'btn small'+(crop?' gold':'')} aria-pressed={crop} onClick={()=>setCrop(!crop)}><Crop size={14}/> Zoom / recadrer</button>
       {crop&&<><input type="range" min="1" max="4" step="0.05" aria-label="Zoom" value={view.z} onChange={e=>setDraft({id:current.id,z:Number(e.target.value),x:view.x,y:view.y})} onPointerUp={()=>void saveView(view)} onKeyUp={()=>void saveView(view)}/><span className="muted">×{view.z.toFixed(1)} · glissez l’image pour la cadrer</span><button className="btn small" onClick={()=>void saveView({z:1,x:50,y:50})}><RotateCcw size={14}/> Rétablir</button></>}
+    </div>}
+    {gallery.some(m=>m.itemId!==item.id)&&<div className="reference-crop">
+      <button className={'btn small'+(outMode?' gold':'')} aria-pressed={outMode} onClick={()=>{setOutMode(!outMode);setOut([]);}}><Unlink size={14}/> Sortir des angles</button>
+      {outMode&&<><span className="muted">Touchez les angles à sortir de la série</span>
+        <button className="btn small gold" disabled={!out.length} onClick={()=>releaseOwners(out)}>Sortir la sélection ({out.length})</button>
+        <button className="btn small" onClick={()=>releaseOwners(gallery.map(m=>m.id))}>Tout sortir</button></>}
     </div>}
     <div className="reference-tools">
       <PickFiles className="btn small" label={busy?'Import…':'Ajouter des angles'} onFiles={files=>void upload(files)}/>

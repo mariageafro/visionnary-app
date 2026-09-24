@@ -82,3 +82,8 @@ export function dissolveSeries(items: Item[], targetIds: string[]): Item[] {
 
 /** Style de cadrage d'un média : zoom autour d'un centre, à appliquer à un conteneur qui masque le débordement. */
 export const viewStyle = (m?: MediaEntry) => (m?.view && m.view.z > 1 ? { transform: `scale(${m.view.z})`, transformOrigin: `${m.view.x}% ${m.view.y}%` } : undefined);
+
+/** Fait ressortir plusieurs éléments d'une série d'un coup ; chacun redevient une pose ou un plan à part entière. */
+export function detachMany(items: Item[], targetId: string, ownerIds: string[]): Item[] {
+  return ownerIds.reduce((acc, id) => detachFromSeries(acc, targetId, id), items);
+}
