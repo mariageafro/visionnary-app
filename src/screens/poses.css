@@ -291,3 +291,6 @@ body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 .sp-list{margin:8px 0 0;padding:10px 12px 10px 28px;border-radius:10px;background:var(--bg-3);font-size:13px;columns:2 220px}
 .section-progress.is-complete{padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--green) 14%,transparent);border:1px solid var(--green)}
 .section-title:has(.section-progress){flex-wrap:wrap}
+.pose-section-head .icon-btn[aria-label^="Masquer "],.pose-section-head .icon-btn[aria-label^="Ajouter une sous-section"]{opacity:.3;transition:opacity .15s}
+.pose-section-head:hover .icon-btn[aria-label^="Masquer "],.pose-section-head:hover .icon-btn[aria-label^="Ajouter une sous-section"],.pose-section-head .icon-btn:focus-visible,.pose-section-head .icon-btn.on{opacity:1}
+@media (pointer:coarse){.pose-section-head .icon-btn[aria-label^="Masquer "],.pose-section-head .icon-btn[aria-label^="Ajouter une sous-section"]{opacity:.55}}
