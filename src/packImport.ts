@@ -10,6 +10,8 @@ export interface PackPose {
   category: string;
   /** Section équivalente dans le tournage cible (ex. « Préparatifs mariée ») ; utilisée si elle existe. */
   section?: string;
+  /** Dossier thématique du pack (ex. « 07 Préparatifs marié · Seul »), utilisé comme catégorie de bibliothèque. */
+  moment_folder?: string;
   subject: string;
   person?: string;
   stage: string;

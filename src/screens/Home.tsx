@@ -26,7 +26,7 @@ export default function Home() {
   const [search, setSearch] = useState(false);
   if (!project) return null;
   const upcoming = w.projects
-    .filter((p) => p.status !== "archivé" && (daysUntil(p.date) ?? 0) >= 0)
+    .filter((p) => !p.library && p.status !== "archivé" && (daysUntil(p.date) ?? 0) >= 0)
     .sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
   const next = upcoming[0] ?? project;
   const days = daysUntil(next.date);
@@ -156,7 +156,7 @@ function GlobalSearch({ onClose }: { onClose: () => void; patch: (id: string, v:
   const [open, setOpen] = useState<Item | null>(null);
   const needle = q.trim().toLowerCase();
   const results = needle
-    ? w.projects.flatMap((p) =>
+    ? w.projects.filter((p) => !p.library).flatMap((p) =>
         p.items
           .filter((i) => Object.values(i).some((v) => typeof v === "string" && v.toLowerCase().includes(needle)))
           .map((i) => ({ p, i })),

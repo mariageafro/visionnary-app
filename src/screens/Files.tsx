@@ -62,9 +62,9 @@ export default function Files() {
           </p>
         </div>
         <div className="card" style={{ textAlign: "center" }}>
-          <strong style={{ fontSize: 22 }}>{w.projects.length}</strong>
+          <strong style={{ fontSize: 22 }}>{w.projects.filter((x) => !x.library).length}</strong>
           <p className="muted" style={{ fontSize: 12 }}>
-            tournage{w.projects.length > 1 ? "s" : ""}
+            tournage{w.projects.filter((x) => !x.library).length > 1 ? "s" : ""}
           </p>
         </div>
       </div>

@@ -15,6 +15,7 @@ export default function Shoots() {
   const [tab, setTab] = useState<"next" | "past" | "archive">("next");
   const [wizard, setWizard] = useState(false);
   const shown = w.projects
+    .filter((p) => !p.library)
     .filter((p) =>
       tab === "archive" ? p.status === "archivé" : p.status !== "archivé" && (tab === "next" ? (daysUntil(p.date) ?? 0) >= 0 : (daysUntil(p.date) ?? 0) < 0),
     )

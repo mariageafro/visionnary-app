@@ -50,6 +50,7 @@ import SceneDesigner from "./scene/SceneDesigner";
 import Coverage from "./screens/Coverage";
 import Sde from "./screens/Sde";
 import Teaser from "./screens/Teaser";
+import Library from "./screens/Library";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
@@ -126,6 +127,7 @@ const side = [
   ["/deroule", "Déroulé du jour J", Clock3],
   ["/m/shots", "Plans & scènes", Images],
   ["/m/poses", "Galerie photographe", Camera],
+  ["/bibliotheque", "Bibliothèque de poses", Images],
   ["/checklist", "Checklist", ListChecks],
   ["/rappels", "Rappels", Bell],
   ["/equipe", "Équipe", Users],
@@ -164,12 +166,15 @@ function Shell() {
   }, [undo, redo]);
 
   const [, section, arg] = route.split("/");
-  const free = ["accueil", "tournages", "plus", "presets", "sync", "fichiers", ""];
+  const free = ["accueil", "tournages", "plus", "presets", "sync", "fichiers", "bibliotheque", ""];
   let screen;
   if (!project && !["sync", "fichiers", "presets"].includes(section)) screen = <Welcome />;
   else if (!project && !free.includes(section)) screen = <Welcome />;
   else
     switch (section) {
+      case "bibliotheque":
+        screen = <Library />;
+        break;
       case "tournages":
         screen = <Shoots />;
         break;

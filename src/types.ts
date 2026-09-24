@@ -113,6 +113,8 @@ export interface Project {
   /** Sections de la galerie photographe, distinctes des chapitres de plans vidéo. */
   poseSections?: ShotSection[];
   estimateSettings?: EstimateSettings;
+  /** Projet spécial « Bibliothèque de poses » : masqué de la liste des tournages. */
+  library?: boolean;
   /** Aides opérateur personnalisées pour ce mariage, par contexte. */
   operatorGuide?: Record<string, string>;
 }

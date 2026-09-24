@@ -134,13 +134,13 @@ export function StoreProvider({ children }: { children: (state: { ready: boolean
   }
   const active = () => {
     const base = current.current!;
-    return base.projects.find((x) => x.id === base.activeProjectId) ?? base.projects[0];
+    return base.projects.find((x) => x.id === base.activeProjectId && !x.library) ?? base.projects.find((x) => !x.library) ?? base.projects[0];
   };
 
   const store: Store | null = w
     ? {
         w,
-        project: w.projects.find((x) => x.id === w.activeProjectId) ?? w.projects[0],
+        project: (w.projects.find((x) => x.id === w.activeProjectId && !x.library) ?? w.projects.find((x) => !x.library)) as Project,
         change,
         update,
         patchItem(id, values, message) {
