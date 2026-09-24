@@ -7,6 +7,7 @@ import { listMedia } from "../storage";
 import { formatBytes } from "../media";
 import { Screen } from "../ui";
 import OfflineStatus from "../OfflineStatus";
+import PackImport from "./PackImport";
 import { itemsOf, titleOf } from "./common";
 
 export default function Files() {
@@ -147,6 +148,8 @@ export default function Files() {
           />
         </label>
       </div>
+
+      {p && <PackImport />}
 
       {p && (
         <section className="print-report">
