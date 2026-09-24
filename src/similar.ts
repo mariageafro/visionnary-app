@@ -14,16 +14,18 @@ export const hamming = (a: string, b: string) => {
   return d;
 };
 
-/** Groupes (≥ 2) d'identifiants dont les empreintes sont à `threshold` bits ou moins, transitivement. */
+/**
+ * Groupes (≥ 2) d'identifiants : chaque photo rejoint le premier groupe dont la photo de référence est à
+ * `threshold` bits ou moins. Pas de chaînage : une série ne dérive pas d'une photo à l'autre.
+ */
 export function groupSimilar(hashes: Map<string, string>, threshold: number): string[][] {
-  const ids = [...hashes.keys()];
-  const parent = new Map(ids.map((id) => [id, id]));
-  const find = (id: string): string => (parent.get(id) === id ? id : (parent.set(id, find(parent.get(id)!)), parent.get(id)!));
-  for (let i = 0; i < ids.length; i++)
-    for (let j = i + 1; j < ids.length; j++) if (hamming(hashes.get(ids[i])!, hashes.get(ids[j])!) <= threshold) parent.set(find(ids[j]), find(ids[i]));
-  const groups = new Map<string, string[]>();
-  for (const id of ids) groups.set(find(id), [...(groups.get(find(id)) ?? []), id]);
-  return [...groups.values()].filter((g) => g.length > 1);
+  const groups: string[][] = [];
+  for (const [id, hash] of hashes) {
+    const home = groups.find((g) => hamming(hashes.get(g[0])!, hash) <= threshold);
+    if (home) home.push(id);
+    else groups.push([id]);
+  }
+  return groups.filter((g) => g.length > 1);
 }
 
 /** Empreinte 64 bits (16 caractères hexadécimaux) d'une image, ou null si elle ne se décode pas. */
