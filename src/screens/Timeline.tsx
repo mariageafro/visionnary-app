@@ -60,11 +60,6 @@ export default function Timeline() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [eventTitle, setEventTitle] = useState("");
   const stages = p.items.filter((i) => i.module === "stages" && i.status !== "archivé").sort((a, b) => a.order - b.order);
-  const scheduleWarnings = p.couple === "Andy & Maeva" ? [
-    "À vérifier : arrivée Visionary à 11 h 20 (consigne client) ; le PDF indique 14 h.",
-    "À vérifier : la découverte de la robe et les préparatifs sont indiqués à 11 h, avant l’arrivée corrigée de l’équipe.",
-    "Le PDF donne le 24 septembre 2026, qui est aujourd’hui ; vérifiez la date si le déroulé concerne une autre journée.",
-  ] : [];
   const add = () => setEditing(makeItem("stages", "", { order: stages.length, duration: 30, time: String(stages.at(-1)?.time ?? "") }));
   const addUnexpectedEvent = () => {
     const now = new Date();
@@ -94,7 +89,6 @@ export default function Timeline() {
           ["regie", "Régie"],
         ]}
       />
-      {scheduleWarnings.length > 0 && <div className="notice" style={{ margin: "12px 0" }}><strong>Points du document à confirmer</strong><ul style={{ marginBottom: 0 }}>{scheduleWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
       <div className="card" style={{ margin: "12px 0", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
         <label className="field" style={{ flex: "1 1 220px", margin: 0 }}>Événement imprévu<input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="Discours surprise, animation…" onKeyDown={(e) => { if (e.key === "Enter" && eventTitle.trim()) addUnexpectedEvent(); }} /></label>
         <button className="btn gold" onClick={addUnexpectedEvent} disabled={!eventTitle.trim()}><CalendarPlus size={16} /> Ajouter maintenant</button>
