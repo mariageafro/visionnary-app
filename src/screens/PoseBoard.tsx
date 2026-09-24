@@ -2,13 +2,14 @@ import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
+import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
-import { reorderOnDrop, usePointerReorder } from "../reorder";
+import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
+import { doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
 import { Empty, MediaViewer, Screen, Thumb, navigate, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
 import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
@@ -33,6 +34,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [filter, setFilter] = useState<Filter>("all");
   const [reorder, setReorder] = useState(false);
   const [layout, setLayout] = useState<"grid" | "carousel">("grid");
+  const [selectMode, setSelectMode] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
   const [editing, setEditing] = useState<Item | null>(null);
   const [viewer, setViewer] = useState<{ ids: string[]; start: number } | null>(null);
   const [pending, setPending] = useState<File[] | null>(null);
@@ -47,7 +50,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const dragging = useFileDrop((files) => queueImport(files), !embedded);
   const all = itemsOf(p, "poses").filter((i) => !activeStage || i.stageId === activeStage);
   // Masquées (statut « archivé ») : retirées de « Toutes » mais retrouvables ici pour les réafficher.
-  const hiddenPoses = itemsOf(p, "poses", true).filter((i) => i.status === "archivé" && (!activeStage || i.stageId === activeStage));
+  const hiddenPoses = itemsOf(p, "poses", true).filter((i) => i.status === "archivé" && !i.mergedInto && (!activeStage || i.stageId === activeStage));
   const categories = poseSectionTitles(p);
   const current = filter.startsWith("cat:") ? filter.slice(4) : "";
   const shown = filter === "hidden" ? hiddenPoses : all.filter((i) =>
@@ -101,13 +104,22 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     if (section === "À faire absolument") patchItem(id, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else patchItem(id, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
   };
-  // Glisser une pose (poignée) sur une autre vignette ou une section : souris, doigt ou stylet.
-  const dropOnPose = (draggedId: string, targetId: string) => {
+  // Glisser une pose (poignée) : bord = insérer avant/après, centre = l'ajouter comme angle de cette pose
+  // (souris, doigt ou stylet). Plusieurs poses cochées se glissent ensemble.
+  const dropOnPose = (draggedId: string, targetId: string, zone: DropZone, ids: string[]) => {
     const list = sections.map(([, l]) => l).find((l) => l.some((i) => i.id === targetId));
     const target = list?.find((i) => i.id === targetId);
+    if (!list || !target) return;
+    if (zone === "merge") {
+      const items = mergeIntoSeries(p.items, targetId, ids);
+      if (!items) return;
+      update({ ...p, items: items.map((i) => (i.id === targetId && !i.coverId ? { ...i, coverId: mediaFor(media, p.items.find((x) => x.id === ids[0])!)?.id } : i)) }, ids.length > 1 ? `${ids.length} poses ajoutées comme angles de « ${target.title} »` : `« ${p.items.find((x) => x.id === draggedId)?.title} » ajoutée comme angle de « ${target.title} »`);
+      setPicked([]);
+      return;
+    }
     const dragged = p.items.find((i) => i.id === draggedId && i.module === "poses");
-    if (!list || !target || !dragged) return;
-    const result = reorderOnDrop(list, draggedId, targetId, dragged);
+    if (!dragged) return;
+    const result = reorderOnDrop(list, draggedId, targetId, dragged, zone);
     if (!result) return;
     update({ ...p, items: p.items.map((i) => (result.orders.has(i.id) ? { ...i, order: result.orders.get(i.id)!, ...(i.id === draggedId && result.crossed && !["À faire absolument", "Masquées"].includes(String(target.category ?? "")) ? { category: target.category } : {}) } : i)) }, result.crossed ? `Pose déplacée vers « ${categoryOf(target)} »` : "Ordre des poses modifié");
   };
@@ -115,7 +127,12 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     if (section === "À faire absolument") patchItem(draggedId, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else if (section !== "Masquées") patchItem(draggedId, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
   };
-  const dragPose = usePointerReorder({ onDropTile: dropOnPose, onDropSection: dropPoseOnSection });
+  const dragPose = usePointerReorder({ onDropTile: dropOnPose, onDropSection: dropPoseOnSection, groupOf: (id) => (selectMode && picked.includes(id) ? picked : [id]) });
+  const mergePicked = () => {
+    if (picked.length < 2) return;
+    const target = order.find((i) => picked.includes(i.id))!;
+    dropOnPose(target.id, target.id, "merge", picked.filter((id) => id !== target.id).concat([]));
+  };
   // Réordonner : on échange l'ordre avec la voisine de la même section, sans toucher aux autres.
   const move = (list: Item[], item: Item, step: number) => {
     const at = list.findIndex((i) => i.id === item.id);
@@ -147,6 +164,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               <ArrowDownUp size={16} /> {reorder ? "Terminer" : <span className="hide-narrow">Réordonner</span>}
             </button>
           )}
+          <button className={"btn" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs photos pour les regrouper en une série"><Layers size={16} /> <span className="hide-narrow">{selectMode ? "Terminer" : "Sélectionner"}</span></button>
           <button className="btn" onClick={() => navigate("/bibliotheque")} title="Piocher des poses dans la bibliothèque"><Images size={16} /> <span className="hide-narrow">Bibliothèque</span></button>
           <button className="icon-btn" aria-label={layout === "grid" ? "Passer en mode carrousel" : "Passer en mode grille"} title={layout === "grid" ? "Vue carrousel (glisser à gauche/droite)" : "Vue grille"} onClick={() => setLayout(layout === "grid" ? "carousel" : "grid")}>
             {layout === "grid" ? <GalleryHorizontal size={18} /> : <LayoutGrid size={18} />}
@@ -194,6 +212,15 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       )}
 
+      {selectMode && (
+        <div className="select-bar" role="status">
+          <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
+          <span className="muted">Glissez-en une sur le centre d'une autre pour l'ajouter comme angle, ou regroupez.</span>
+          <button className="btn gold" disabled={picked.length < 2} onClick={mergePicked}><Layers size={16} /> Regrouper en une série</button>
+          <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
+        </div>
+      )}
+
       {sections.length ? (
         sections.map(([section, list]) => (
           <section key={section} data-reorder-section={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
@@ -218,9 +245,11 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 const thumb = mediaFor(media, pose);
                 const op = operators.get(String(pose.operatorId));
                 const isVideo = thumb?.type.startsWith("video/");
+                const series = seriesMedia(media, pose);
+                const taken = series.filter((m) => doneAngles(pose).has(m.id)).length;
                 return (
-                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")} data-reorder={pose.id}>
-                    <button type="button" className="pose-media" onClick={() => setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) })} aria-label={"Voir la pose " + (pose.title || "")}>
+                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")} data-reorder={pose.id} data-merge="">
+                    <button type="button" className="pose-media" onClick={() => (selectMode ? setPicked((current) => (current.includes(pose.id) ? current.filter((x) => x !== pose.id) : [...current, pose.id])) : setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) }))} aria-label={"Voir la pose " + (pose.title || "")}>
                       <span className="pose-frame">
                         {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}
                       </span>
@@ -245,6 +274,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                       <Star size={15} fill={pose.favorite === true ? "currentColor" : "none"} />
                     </button>
                     <button type="button" className="pose-essential" aria-pressed={pose.priority === "MUST HAVE"} aria-label={pose.priority === "MUST HAVE" ? "Retirer des essentiels photo" : "Marquer essentiel photo"} onClick={() => patchItem(pose.id, { priority: pose.priority === "MUST HAVE" ? "IMPORTANT" : "MUST HAVE" })}>Essentiel</button>
+                    {series.length > 1 && <span className={"pose-angles" + (taken === series.length ? " is-complete" : "")} title={`${series.length} angles · ${taken} pris`}><Layers size={13} /> {taken ? `${taken}/${series.length}` : series.length}</span>}
+                    {selectMode && <button type="button" className="pose-select" aria-pressed={picked.includes(pose.id)} aria-label={`Cocher ${pose.title}`} onClick={() => setPicked((current) => (current.includes(pose.id) ? current.filter((x) => x !== pose.id) : [...current, pose.id]))}>{picked.includes(pose.id) ? <Check size={18} /> : null}</button>}
                     <span className="pose-drag" role="button" tabIndex={0} onPointerDown={(event) => dragPose(event, pose.id)} title={`Glisser « ${pose.title} » vers une autre place ou une autre section`} aria-label={`Déplacer ${pose.title} : glisser vers une autre photo ou une autre section`}><GripVertical size={16} /></span>
                     <QuickStatus item={pose}/>
                     {reorder && (

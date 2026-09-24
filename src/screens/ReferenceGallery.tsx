@@ -1,16 +1,17 @@
 import { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ImagePlus, Star } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ImagePlus, Star, Unlink } from 'lucide-react';
 import type { Item, MediaEntry } from '../types';
 import { useProject } from '../store';
 import { importMedia } from '../media';
 import { putMedia } from '../storage';
 import { mediaChanged, Thumb } from '../ui';
 import { mediaFor, VideoPreview } from './common';
+import { detachFromSeries, doneAngles, seriesMedia, toggleAngle } from '../merge';
 import { PickFiles } from './MediaDrop';
 import './references.css';
 
 export function referencesFor(media: MediaEntry[], item: Item) {
-  const own = media.filter(m => m.itemId === item.id && !m.unsupported && /^(image|video)\//.test(m.type));
+  const own = seriesMedia(media, item);
   const fallback = mediaFor(media, item);
   const list = own.length ? own : fallback ? [fallback] : [];
   return [...list].sort((a,b) => Number(b.id === item.coverId) - Number(a.id === item.coverId));
@@ -18,13 +19,16 @@ export function referencesFor(media: MediaEntry[], item: Item) {
 
 /** Un geste horizontal change l'angle, jamais la mission. */
 export default function ReferenceGallery({ item, media }: { item: Item; media: MediaEntry[] }) {
-  const { project, patchItem, notify } = useProject();
+  const { project, patchItem, update, notify } = useProject();
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const swipe = useRef<{x:number;y:number}|null>(null);
   const gallery = referencesFor(media,item);
   const index = Math.max(0,gallery.findIndex(m=>m.id===selected));
   const current = gallery[index];
+  const taken = doneAngles(item);
+  const takenCount = gallery.filter(m => taken.has(m.id)).length;
+  const foreign = current && current.itemId !== item.id;
   const go = (step:number) => { const next=gallery[index+step]; if(next)setSelected(next.id); };
   async function upload(files: File[]) {
     if(busy)return;
@@ -41,11 +45,14 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
       {current ? current.type.startsWith('video/') ? <VideoPreview key={current.id} media={current} className="reference-video" loop /> : <Thumb media={current} className="reference-photo" full /> : <div className="reference-empty"><ImagePlus size={36}/><p>Ajoutez la pose, puis ses différents angles.</p></div>}
       {index>0&&<button className="reference-arrow prev" aria-label="Angle précédent" onClick={()=>go(-1)}><ChevronLeft/></button>}
       {index<gallery.length-1&&<button className="reference-arrow next" aria-label="Angle suivant" onClick={()=>go(1)}><ChevronRight/></button>}
-      {current&&<span className="reference-count">Angle {index+1} / {gallery.length}</span>}
+      {current&&<span className="reference-count">Angle {index+1} / {gallery.length}{gallery.length>1?` · ${takenCount} pris`:''}</span>}
+      {current&&taken.has(current.id)&&<span className="reference-taken"><Check size={14}/> Pris</span>}
     </div>
-    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} onClick={()=>setSelected(m.id)}><Thumb media={m}/></button>)}</div>}
+    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={taken.has(m.id)?'is-taken':''} onClick={()=>setSelected(m.id)}><Thumb media={m}/>{taken.has(m.id)&&<span className="reference-tick"><Check size={12}/></span>}</button>)}</div>}
     <div className="reference-tools">
       <PickFiles className="btn small" label={busy?'Import…':'Ajouter des angles'} onFiles={files=>void upload(files)}/>
+      {current&&<button className={'btn small'+(taken.has(current.id)?' gold':'')} aria-pressed={taken.has(current.id)} onClick={()=>update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,current.id,gallery.length):i)},taken.has(current.id)?'Angle remis à faire':'Angle pris')}><Check size={14}/> {taken.has(current.id)?'Angle pris':'Marquer l’angle pris'}</button>}
+      {foreign&&<button className="btn small" onClick={()=>update({...project,items:detachFromSeries(project.items,item.id,current.itemId)},'Angle détaché : il redevient une pose à part')}><Unlink size={14}/> Détacher cet angle</button>}
       {current&&<button className="btn small" aria-pressed={current.id===item.coverId || (!item.coverId&&index===0)} onClick={()=>patchItem(item.id,{coverId:current.id},'Couverture choisie')}><Star size={14}/> Couverture</button>}
     </div>
     {current&&<label className="reference-caption">Angle / cadrage

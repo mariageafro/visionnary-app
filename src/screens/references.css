@@ -13,3 +13,8 @@
 .sv-main.info-hidden .reference-image {
   height: min(82dvh, 900px);
 }
+
+.reference-taken{position:absolute;left:10px;top:10px;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;background:var(--green);color:#fff;font-size:12px;font-weight:800}
+.reference-strip button{position:relative}
+.reference-strip button.is-taken{outline:2px solid var(--green)}
+.reference-tick{position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff}

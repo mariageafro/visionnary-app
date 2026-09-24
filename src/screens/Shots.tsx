@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from "react";
-import { Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
+import { Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
 import type { ShotSection } from "../types";
 import { done, makeItem, orderSections, sectionOf, shotSections } from "../model";
@@ -7,7 +7,8 @@ import { isDroneShot, isPhotoShot, isVideoShot } from "../stageStats";
 import { withOrder } from "../features";
 import { linkShotsToStages, professionalShotList, shotListCount } from "../shotlist";
 import { useProject } from "../store";
-import { reorderOnDrop, usePointerReorder } from "../reorder";
+import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
+import { doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
 import { matchesShotSearch } from "../shotSearch";
@@ -44,6 +45,8 @@ export default function Shots() {
   const [sectionActions, setSectionActions] = useState<string | null>(null);
   const [showHiddenSections, setShowHiddenSections] = useState(false);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
   const media = useMedia(p.id);
   const importer = useImporter();
   const dragging = useFileDrop((files) => setPending({ files, target: kind === "video" || kind === "drone" ? "video" : "photo" }));
@@ -145,12 +148,19 @@ export default function Shots() {
     if (destination) moveSectionTo(section, destination);
   };
   // Glisser aux pointeurs (souris, doigt, stylet) : un plan sur un autre plan ou une section, ou une section sur une autre.
-  const dropShotOnShot = (draggedId: string, targetId: string) => {
+  const dropShotOnShot = (draggedId: string, targetId: string, zone: DropZone = "before", ids: string[] = [draggedId]) => {
     const dragged = all.find((item) => item.id === draggedId);
     const target = all.find((item) => item.id === targetId);
     if (!dragged || !target) return;
+    if (zone === "merge") {
+      const merged = mergeIntoSeries(p.items, targetId, ids);
+      if (!merged) return;
+      update({ ...p, items: merged.map((item) => (item.id === targetId && !item.coverId ? { ...item, coverId: mediaFor(media, dragged)?.id } : item)) }, ids.length > 1 ? `${ids.length} plans ajoutés comme angles de « ${target.title} »` : `« ${dragged.title} » ajouté comme angle de « ${target.title} »`);
+      setPicked([]);
+      return;
+    }
     const list = items.filter((item) => sectionOf(item) === sectionOf(target));
-    const result = reorderOnDrop(list, draggedId, targetId, dragged);
+    const result = reorderOnDrop(list, draggedId, targetId, dragged, zone);
     if (!result) return;
     update({ ...p, items: p.items.map((item) => (result.orders.has(item.id) ? { ...item, order: result.orders.get(item.id)!, ...(item.id === draggedId && result.crossed ? { section: sectionOf(target) } : {}) } : item)) }, result.crossed ? `Plan déplacé vers « ${sectionOf(target)} »` : "Ordre des plans modifié");
   };
@@ -162,7 +172,7 @@ export default function Shots() {
     }
     if (draggedId !== section) moveSectionTo(draggedId, section);
   };
-  const dragShot = usePointerReorder({ onDropTile: dropShotOnShot, onDropSection: dropOnSectionPointer });
+  const dragShot = usePointerReorder({ onDropTile: dropShotOnShot, onDropSection: dropOnSectionPointer, groupOf: (id) => (selectMode && picked.includes(id) ? picked : [id]) });
   const isInternalDrag = (event: DragEvent<HTMLElement>) => Array.from(event.dataTransfer.types).some((type) => type === shotDragType || type === sectionDragType);
   const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
     event.preventDefault();
@@ -322,8 +332,17 @@ export default function Shots() {
             <button className="btn small" onClick={() => setConfirmLoad(true)}><Sparkles size={16} /> Trame de mariage</button>
           </div>
         </details>
+        <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>
       </div>
+      {selectMode && (
+        <div className="select-bar" role="status">
+          <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
+          <span className="muted">Glissez-en un sur le centre d'un autre pour l'ajouter comme angle, ou regroupez.</span>
+          <button className="btn gold" disabled={picked.length < 2} onClick={() => dropShotOnShot(picked[0], picked[0], "merge", picked.slice(1))}><Layers size={16} /> Regrouper en une série</button>
+          <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
+        </div>
+      )}
       <div className="shot-results">
         <span role="status">{items.length} plan{items.length > 1 ? "s" : ""} affiché{items.length > 1 ? "s" : ""} sur {active.length}</span>
         <button className="btn small" onClick={() => setSectionEditor({ title: "" })}><Plus size={15} /> Section</button>
@@ -376,8 +395,10 @@ export default function Shots() {
               </div>
               {!sectionConfig?.collapsed && <div className="insp-grid">
                 {list.map((i) => (
-                  <div key={i.id} className="shot-draggable" data-reorder={i.id}>
+                  <div key={i.id} className="shot-draggable" data-reorder={i.id} data-merge="">
                   <span className="shot-card-grip" role="button" tabIndex={0} title={`Glisser « ${i.title} » vers une autre place ou une autre section`} onPointerDown={(event) => dragShot(event, i.id)}><GripVertical size={13} /> Déplacer</span>
+                  {(() => { const series = seriesMedia(media, i); const taken = series.filter((m) => doneAngles(i).has(m.id)).length; return series.length > 1 ? <span className={"pose-angles" + (taken === series.length ? " is-complete" : "")} title={`${series.length} angles · ${taken} pris`}><Layers size={13} /> {taken ? `${taken}/${series.length}` : series.length}</span> : null; })()}
+                  {selectMode && <button type="button" className="pose-select" aria-pressed={picked.includes(i.id)} aria-label={`Cocher ${i.title}`} onClick={() => setPicked((current) => (current.includes(i.id) ? current.filter((x) => x !== i.id) : [...current, i.id]))}>{picked.includes(i.id) ? <Check size={18} /> : null}</button>}
                   <MediaCard
                     item={i}
                     animate={motion}
