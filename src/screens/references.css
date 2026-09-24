@@ -21,3 +21,4 @@
 .reference-strip button{position:relative}.reference-tick{width:24px;height:24px;background:#000b;border:1px solid #fff9;color:#fff9}.reference-tick.on{background:var(--green);border-color:var(--green);color:#fff}
 .reference-image{overflow:hidden}.reference-zoom{width:100%;height:100%}.reference-crop{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 12px}.reference-crop input[type=range]{flex:1;min-width:120px;accent-color:var(--gold)}
 .reference-strip button.is-out{outline:3px solid var(--gold);outline-offset:-3px;opacity:.75}
+.reference-strip button.is-hidden{opacity:.35;filter:grayscale(1)}

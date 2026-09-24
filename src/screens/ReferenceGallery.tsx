@@ -1,19 +1,19 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Crop, ImagePlus, RotateCcw, Star, Unlink } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Crop, Eye, EyeOff, ImagePlus, Trash2, RotateCcw, Star, Unlink } from 'lucide-react';
 import type { Item, MediaEntry } from '../types';
 import { useProject } from '../store';
 import { importMedia } from '../media';
-import { putMedia } from '../storage';
+import { deleteMedia, putMedia } from '../storage';
 import { mediaChanged, Thumb } from '../ui';
 import { uid } from '../model';
 import { mediaFor, VideoPreview } from './common';
-import { detachMany, detachFromSeries, doneAngles, seriesMedia, toggleAngle, viewStyle } from '../merge';
+import { hiddenAngles, detachMany, detachFromSeries, doneAngles, seriesMedia, toggleAngle, viewStyle } from '../merge';
 import { usePointerReorder } from '../reorder';
 import { PickFiles } from './MediaDrop';
 import './references.css';
 
 export function referencesFor(media: MediaEntry[], item: Item) {
-  const own = seriesMedia(media, item);
+  const own = seriesMedia(media, item, true);
   const fallback = mediaFor(media, item);
   const list = own.length ? own : fallback ? [fallback] : [];
   return list;
@@ -68,6 +68,28 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
     update({ ...project, items: [...items, ...created] }, `${owners.length + toSplit.length} angle(s) sorti(s) : ils redeviennent des éléments à part`);
     setOut([]); setOutMode(false); setSelected('');
   };
+  const hidden = hiddenAngles(item);
+  /** Masque ou réaffiche des angles : ils restent dans la série mais sortent de la vignette et du décompte. */
+  const toggleHidden = (ids: string[]) => {
+    const now = new Set(hidden);
+    const allHidden = ids.every(id => now.has(id));
+    ids.forEach(id => allHidden ? now.delete(id) : now.add(id));
+    update({ ...project, items: project.items.map(i => i.id === item.id ? { ...i, angleHidden: [...now].join(',') } : i) }, allHidden ? 'Angle(s) réaffiché(s)' : 'Angle(s) masqué(s)');
+    setOut([]);
+  };
+  /** Supprime définitivement des angles ; une pose regroupée qui n'a plus aucun fichier disparaît avec. */
+  const removeAngles = async (ids: string[]) => {
+    const doomed = gallery.filter(m => ids.includes(m.id));
+    if (!doomed.length) return;
+    if (doomed.length >= gallery.length) { notify('Gardez au moins un angle (ou supprimez la pose entière)'); return; }
+    if (!window.confirm(`Supprimer définitivement ${doomed.length} angle${doomed.length > 1 ? 's' : ''} ?`)) return;
+    for (const m of doomed) await deleteMedia(m.id);
+    mediaChanged();
+    const emptied = new Set([...new Set(doomed.filter(m => m.itemId !== item.id).map(m => m.itemId))].filter(owner => !gallery.some(m => m.itemId === owner && !ids.includes(m.id))));
+    const gone = new Set(ids);
+    update({ ...project, items: project.items.filter(i => !emptied.has(i.id)).map(i => i.id === item.id ? { ...i, includes: String(i.includes ?? '').split(',').filter(x => x && !emptied.has(x)).join(','), anglesDone: String(i.anglesDone ?? '').split(',').filter(x => x && !gone.has(x)).join(','), angleOrder: String(i.angleOrder ?? '').split(',').filter(x => x && !gone.has(x)).join(','), angleHidden: String(i.angleHidden ?? '').split(',').filter(x => x && !gone.has(x)).join(','), ...(gone.has(String(i.coverId)) ? { coverId: gallery.find(m => !gone.has(m.id))?.id } : {}) } : i) }, `${doomed.length} angle(s) supprimé(s)`);
+    setOut([]); setOutMode(false); setSelected('');
+  };
   const go = (step:number) => { const next=gallery[index+step]; if(next)setSelected(next.id); };
   async function upload(files: File[]) {
     if(busy)return;
@@ -88,7 +110,7 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
       {current&&<span className="reference-count">Angle {index+1} / {gallery.length}{gallery.length>1?` · ${takenCount} pris`:''}</span>}
       {current&&taken.has(current.id)&&<span className="reference-taken"><Check size={14}/> Pris</span>}
     </div>
-    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} data-reorder={m.id} style={{touchAction:'none'}} onPointerDown={e=>{if(gallery.length>1)dragAngle(e,m.id);}} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={(taken.has(m.id)?'is-taken ':'')+(out.includes(m.id)?'is-out':'')} onClick={()=>{if(outMode)setOut(o=>o.includes(m.id)?o.filter(x=>x!==m.id):[...o,m.id]);else setSelected(m.id);}}><Thumb media={m}/><span role="button" aria-label={taken.has(m.id)?`Angle ${n+1} pris`:`Marquer l’angle ${n+1} pris`} className={'reference-tick'+(taken.has(m.id)?' on':'')} onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,m.id,gallery.length):i)},taken.has(m.id)?'Angle remis à faire':'Angle pris');}}><Check size={12}/></span></button>)}</div>}
+    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} data-reorder={m.id} style={{touchAction:'none'}} onPointerDown={e=>{if(gallery.length>1)dragAngle(e,m.id);}} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={(taken.has(m.id)?'is-taken ':'')+(out.includes(m.id)?'is-out ':'')+(hidden.has(m.id)?'is-hidden':'')} onClick={()=>{if(outMode)setOut(o=>o.includes(m.id)?o.filter(x=>x!==m.id):[...o,m.id]);else setSelected(m.id);}}><Thumb media={m}/><span role="button" aria-label={taken.has(m.id)?`Angle ${n+1} pris`:`Marquer l’angle ${n+1} pris`} className={'reference-tick'+(taken.has(m.id)?' on':'')} onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,m.id,gallery.filter(x=>!hidden.has(x.id)).length):i)},taken.has(m.id)?'Angle remis à faire':'Angle pris');}}><Check size={12}/></span></button>)}</div>}
     {current&&<div className="reference-crop">
       <button className={'btn small'+(crop?' gold':'')} aria-pressed={crop} onClick={()=>setCrop(!crop)}><Crop size={14}/> Zoom / recadrer</button>
       {crop&&<><input type="range" min="1" max="4" step="0.05" aria-label="Zoom" value={view.z} onChange={e=>setDraft({id:current.id,z:Number(e.target.value),x:view.x,y:view.y})} onPointerUp={()=>void saveView(view)} onKeyUp={()=>void saveView(view)}/><span className="muted">×{view.z.toFixed(1)} · glissez l’image pour la cadrer</span><button className="btn small" onClick={()=>void saveView({z:1,x:50,y:50})}><RotateCcw size={14}/> Rétablir</button></>}
@@ -97,12 +119,16 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
       <button className={'btn small'+(outMode?' gold':'')} aria-pressed={outMode} onClick={()=>{setOutMode(!outMode);setOut([]);}}><Unlink size={14}/> Sortir des angles</button>
       {outMode&&<><span className="muted">Touchez les angles à sortir de la série</span>
         <button className="btn small gold" disabled={!out.length} onClick={()=>void releaseOwners(out)}>Sortir la sélection ({out.length})</button>
-        <button className="btn small" onClick={()=>void releaseOwners(gallery.map(m=>m.id))}>Tout sortir</button></>}
+        <button className="btn small" onClick={()=>void releaseOwners(gallery.map(m=>m.id))}>Tout sortir</button>
+        <button className="btn small" disabled={!out.length} onClick={()=>toggleHidden(out)}><EyeOff size={14}/> Masquer / réafficher</button>
+        <button className="btn small" disabled={!out.length} onClick={()=>void removeAngles(out)}><Trash2 size={14}/> Supprimer</button></>}
     </div>}
     <div className="reference-tools">
       <PickFiles className="btn small" label={busy?'Import…':'Ajouter des angles'} onFiles={files=>void upload(files)}/>
-      {current&&<button className={'btn small'+(taken.has(current.id)?' gold':'')} aria-pressed={taken.has(current.id)} onClick={()=>update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,current.id,gallery.length):i)},taken.has(current.id)?'Angle remis à faire':'Angle pris')}><Check size={14}/> {taken.has(current.id)?'Angle pris':'Marquer l’angle pris'}</button>}
+      {current&&<button className={'btn small'+(taken.has(current.id)?' gold':'')} aria-pressed={taken.has(current.id)} onClick={()=>update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,current.id,gallery.filter(x=>!hidden.has(x.id)).length):i)},taken.has(current.id)?'Angle remis à faire':'Angle pris')}><Check size={14}/> {taken.has(current.id)?'Angle pris':'Marquer l’angle pris'}</button>}
       {foreign&&<button className="btn small" onClick={()=>update({...project,items:detachFromSeries(project.items,item.id,current.itemId)},'Angle détaché : il redevient une pose à part')}><Unlink size={14}/> Détacher cet angle</button>}
+      {current&&gallery.length>1&&<button className="btn small" aria-pressed={hidden.has(current.id)} onClick={()=>toggleHidden([current.id])}>{hidden.has(current.id)?<><Eye size={14}/> Réafficher cet angle</>:<><EyeOff size={14}/> Masquer cet angle</>}</button>}
+      {current&&gallery.length>1&&<button className="btn small" onClick={()=>void removeAngles([current.id])}><Trash2 size={14}/> Supprimer cet angle</button>}
       {current&&<button className="btn small" aria-pressed={current.id===item.coverId || (!item.coverId&&index===0)} onClick={()=>patchItem(item.id,{coverId:current.id},'Couverture choisie')}><Star size={14}/> Couverture</button>}
     </div>
     {current&&<label className="reference-caption">Angle / cadrage

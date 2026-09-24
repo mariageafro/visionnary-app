@@ -11,9 +11,13 @@ const list = (value: unknown) => String(value ?? "").split(",").filter(Boolean);
 export const angleOwners = (item: Item) => [item.id, ...list(item.includes)];
 
 /** Fichiers d'une série, la couverture d'abord. */
-export function seriesMedia(media: MediaEntry[], item: Item): MediaEntry[] {
+/** Angles masqués d'une série (ils restent stockés, mais n'apparaissent plus sur la vignette ni dans le décompte). */
+export const hiddenAngles = (item: Item) => new Set(list(item.angleHidden));
+
+export function seriesMedia(media: MediaEntry[], item: Item, withHidden = false): MediaEntry[] {
   const owners = new Set(angleOwners(item));
-  const own = media.filter((m) => owners.has(m.itemId) && !m.unsupported && /^(image|video)\//.test(m.type));
+  const off = withHidden ? new Set<string>() : hiddenAngles(item);
+  const own = media.filter((m) => owners.has(m.itemId) && !off.has(m.id) && !m.unsupported && /^(image|video)\//.test(m.type));
   const order = list(item.angleOrder);
   if (order.length) {
     const rank = (m: MediaEntry) => (order.includes(m.id) ? order.indexOf(m.id) : order.length);
