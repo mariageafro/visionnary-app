@@ -1,4 +1,5 @@
 import type { Item, Project } from "./types";
+import { orderByDay } from "./dayOrder";
 import { poseCategories } from "./model";
 
 const titleOf = (item: Item) => String(item.category || "Sans catégorie");
@@ -136,3 +137,13 @@ export const isPoseSectionHidden = (project: Project, title: string): boolean =>
   const parent = parentTitleOf(project, title);
   return own?.hidden === true || (parent ? isPoseSectionHidden(project, parent) : false);
 };
+
+/** Réorganise les sections de premier niveau dans l'ordre de la journée ; chaque sous-section suit son parent. */
+export function orderPoseSectionsByDay(project: Project): Project {
+  const titles = poseSectionTitles(project);
+  const { tops, kids } = blocks(project, titles);
+  const stages = project.items.filter((i) => i.module === "stages");
+  const itemsOf = (t: string) => project.items.filter((i) => i.module === "poses" && [t, ...kids(t)].includes(titleOf(i)));
+  const ordered = orderByDay(tops.map((t) => ({ title: t, items: itemsOf(t) })), stages);
+  return writeOrder(project, ordered.flatMap((t) => [t, ...kids(t)]));
+}

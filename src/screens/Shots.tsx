@@ -1,7 +1,7 @@
 import { groupSimilar, mediaHash } from "../similar";
 import FloatDock from "./FloatDock";
 import SectionProgress from "./SectionProgress";
-import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
+import { Clock3, ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
@@ -16,7 +16,7 @@ import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia } from "../mer
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
 import { matchesShotSearch } from "../shotSearch";
-import { orderedSectionTitles, reorderShotSection, siblingSectionTitles } from "../shotSections";
+import { orderedSectionTitles, orderShotSectionsByDay, reorderShotSection, siblingSectionTitles } from "../shotSections";
 import "./shots.css";
 import BulkAdd from "./BulkAdd";
 import { accepted as acceptedImportFile, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter, type ImportTarget } from "./MediaDrop";
@@ -382,6 +382,7 @@ export default function Shots() {
             <button className="btn small" onClick={() => setConfirmLoad(true)}><Sparkles size={16} /> Trame de mariage</button>
           </div>
         </details>
+        <button className="btn small" onClick={() => { if (window.confirm("Réorganiser les sections dans l'ordre de la journée ? Vous pouvez annuler ensuite.")) update({ ...p, shotSections: orderShotSectionsByDay(configured, orderSections(active.map(sectionOf)), (titles) => active.filter((x) => titles.includes(sectionOf(x))), p.items.filter((x) => x.module === "stages")) }, "Sections rangées dans l'ordre de la journée"); }} title="Ranger les sections dans l'ordre de la journée"><Clock3 size={16} /> Ordre du jour</button>
         <button className={"btn small" + (simOpen ? " gold" : "")} aria-pressed={simOpen} onClick={() => setSimOpen(!simOpen)} title="Regrouper les plans qui se ressemblent"><Layers size={16} /> Similaires</button>
         <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>

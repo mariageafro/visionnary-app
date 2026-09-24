@@ -1,3 +1,4 @@
+import { orderByDay } from "./dayOrder";
 import type { ShotSection } from "./types";
 
 /** Place chaque sous-section juste après son parent, même avec les ordres des anciens projets. */
@@ -47,4 +48,19 @@ export function reorderShotSection(configured: ShotSection[], fallbackTitles: st
     ...configured.filter((entry) => !siblings.includes(entry.title)),
     ...siblings.map((title, order) => ({ ...(configured.find((entry) => entry.title === title) ?? { id: crypto.randomUUID(), title }), order, ...(parentId ? { parentId } : {}) })),
   ];
+}
+
+/** Nouvel ordre des chapitres racines d'après la journée ; leurs sous-sections gardent leur ordre et les suivent. */
+export function orderShotSectionsByDay(configured: ShotSection[], fallbackTitles: string[], itemsIn: (titles: string[]) => import("./types").Item[], stages: import("./types").Item[]): ShotSection[] {
+  const ids = new Set(configured.map((s) => s.id));
+  const isRoot = (title: string) => { const s = configured.find((e) => e.title === title); return !s || !s.parentId || !ids.has(s.parentId); };
+  const all = orderedSectionTitles(configured, fallbackTitles);
+  const roots = all.filter(isRoot);
+  const childrenOf = (title: string) => {
+    const s = configured.find((e) => e.title === title);
+    return s ? configured.filter((e) => e.parentId === s.id).map((e) => e.title) : [];
+  };
+  const ordered = orderByDay(roots.map((t) => ({ title: t, items: itemsIn([t, ...childrenOf(t)]) })), stages);
+  const rest = configured.filter((e) => !ordered.includes(e.title));
+  return [...rest, ...ordered.map((title, order) => ({ ...(configured.find((e) => e.title === title) ?? { id: crypto.randomUUID(), title }), order }))];
 }

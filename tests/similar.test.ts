@@ -61,3 +61,19 @@ describe("avancement d'une section", () => {
     expect([r.total, r.taken, r.pct, r.pending.length, r.items.total, r.items.done]).toEqual([3, 2, 67, 1, 3, 2]);
   });
 });
+
+import { orderByDay } from "../src/dayOrder";
+describe("ordre de la journée", () => {
+  it("range d'après les étapes puis d'après le nom", () => {
+    const stage = (id: string, time: string) => ({ ...makeItem("stages", id, {}), id, time }) as ReturnType<typeof makeItem>;
+    const it = (stageId: string) => ({ ...makeItem("poses", "x", {}), stageId }) as ReturnType<typeof makeItem>;
+    const out = orderByDay([
+      { title: "Réception", items: [] },
+      { title: "Cérémonie", items: [it("s2")] },
+      { title: "Accessoires", items: [] },
+      { title: "Préparatifs", items: [it("s1")] },
+      { title: "Divers", items: [] },
+    ], [stage("s1", "09:00"), stage("s2", "15:30")]);
+    expect(out).toEqual(["Préparatifs", "Divers", "Accessoires", "Cérémonie", "Réception"]);
+  });
+});

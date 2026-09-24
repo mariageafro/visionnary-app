@@ -3,14 +3,14 @@ import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
 import SectionProgress from "./SectionProgress";
-import { FolderPlus, ClipboardPaste, Scissors, Unlink } from "lucide-react";
+import { Clock3, FolderPlus, ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
-import { addPoseSection, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
+import { addPoseSection, orderPoseSectionsByDay, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
@@ -229,6 +229,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           )}
           <button className={"btn" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs photos pour les regrouper en une série"><Layers size={16} /> <span className="hide-narrow">{selectMode ? "Terminer" : "Sélectionner"}</span></button>
           <button className={"btn" + (autoSimilar || simOpen ? " gold" : "")} aria-pressed={simOpen} onClick={() => setSimOpen(!simOpen)} title="Regrouper automatiquement les photos qui se ressemblent"><Layers size={16} /> <span className="hide-narrow">Similaires</span></button>
+          <button className="btn" onClick={() => { if (window.confirm("Réorganiser les sections dans l'ordre de la journée (préparatifs, accessoires, cortège, cérémonie…) ? Vous pouvez annuler ensuite.")) update(orderPoseSectionsByDay(p), "Sections rangées dans l'ordre de la journée"); }} title="Ranger les sections dans l'ordre de la journée"><Clock3 size={16} /> <span className="hide-narrow">Ordre du jour</span></button>
           <button className="btn" onClick={() => navigate("/bibliotheque")} title="Piocher des poses dans la bibliothèque"><Images size={16} /> <span className="hide-narrow">Bibliothèque</span></button>
           <button className="icon-btn" aria-label={layout === "grid" ? "Passer en mode carrousel" : "Passer en mode grille"} title={layout === "grid" ? "Vue carrousel (glisser à gauche/droite)" : "Vue grille"} onClick={() => setLayout(layout === "grid" ? "carousel" : "grid")}>
             {layout === "grid" ? <GalleryHorizontal size={18} /> : <LayoutGrid size={18} />}
