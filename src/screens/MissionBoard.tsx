@@ -10,6 +10,7 @@ import ShotViewer from './ShotViewer';
 import { PoseViewer } from './PoseBoard';
 import QuickStatus from './QuickStatus';
 import './missions.css';
+import { refProgress, refsOf } from '../refs';
 import { isVideoShot } from '../stageStats';
 import { travelLegs, travelClock } from '../travel';
 
@@ -19,6 +20,7 @@ export default function MissionBoard(){
 const [editing,setEditing]=useState<Item|null>(null);const [viewing,setViewing]=useState<Item|null>(null);
  const [tag,setTag]=useState<MissionTag|''>('');
  const swipe=useRef<{x:number;y:number}|null>(null);
+ const refAll=refsOf(p);const refPg=refProgress(refAll);
  const stages=itemsOf(p,'stages');const operators=operatorsOf(p);
  const all=missionItems(p);const bySide=all.filter(i=>(subject==='Tous'||subjectOf(i)===subject)&&(!stageId||i.stageId===stageId)&&(i.module==='shots'&&isVideoShot(i)));
  const list=bySide.filter(i=>matchesTag(i,tag));
@@ -28,7 +30,7 @@ const [editing,setEditing]=useState<Item|null>(null);const [viewing,setViewing]=
  return <Screen title="Votre journée" actions={<button className="icon-btn" aria-label="Personnaliser le tournage" onClick={()=>navigate('/tournage')}><Pencil size={18}/></button>}>
  <div className="mission-intro"><div><small>{p.date ? new Date(p.date+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'Date à définir'}</small><h2>{p.couple||p.name}</h2></div><button className="btn small" onClick={()=>navigate('/tournages')}>Changer</button></div>
  {p.features?.includes("démo")&&<p className="muted">Démo modifiable · missions fictives, photos d’inspiration de plusieurs mariages. <a href="demo-wedding/sources.html" target="_blank" rel="noopener noreferrer">Crédits des images</a></p>}
- <div className="mission-shortcuts"><button onClick={()=>navigate('/m/poses')}><Camera size={19}/> Galerie photographe</button><button onClick={()=>navigate('/scenes')}><Map size={19}/> Plans de scène</button></div>
+ <div className="mission-shortcuts">{refAll.length>0&&<button onClick={()=>navigate('/m/references')}><Clapperboard size={19}/> Références du couple · {refPg.pct} %{refPg.mustLeft.length?` · ${refPg.mustLeft.length} Must`:''}</button>}<button onClick={()=>navigate('/m/poses')}><Camera size={19}/> Galerie photographe</button><button onClick={()=>navigate('/scenes')}><Map size={19}/> Plans de scène</button></div>
  <button className="mission-alert-link" onClick={()=>navigate("/rappels")}>Rappels terrain <span>{p.alerts?.enabled?`Activés · ${p.alerts.thresholds.join(" / ")} min`:"Activer les alertes"} →</span></button>
  <div className="mission-filters"><select aria-label="Moment de la journée" value={stageId} onChange={e=>setStageId(e.target.value)}><option value="">Toute la journée</option>{stages.map(s=><option key={s.id} value={s.id}>{s.time} · {s.title}</option>)}</select></div>
  <div className="subject-tabs" role="group" aria-label="Côté du mariage">{subjects.map(s=><button key={s} aria-pressed={subject===s} onClick={()=>setSubject(s)}>{s}</button>)}</div>

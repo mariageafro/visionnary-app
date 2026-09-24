@@ -1,3 +1,4 @@
+import { refProgress, refsOf } from "../refs";
 import { useState } from "react";
 import { Bell, Camera, ChevronRight, Clapperboard, CloudSun, Images, ListChecks, Play, Search, Users, CalendarDays } from "lucide-react";
 import type { Item } from "../types";
@@ -107,6 +108,7 @@ export default function Home() {
             </>
           }
         />
+        {refsOf(project).length > 0 && <Tile href="/m/references" icon={<Images size={22} />} title="Références du couple" sub={`${refProgress(refsOf(project)).pct} % · ${refProgress(refsOf(project)).mustLeft.length} Must Have restants`} />}
         <Tile href="/m/shots" icon={<Images size={22} />} title="Plans & inspirations" sub={`${shots.length} plans · ${refs.length} références`} />
         <Tile href="/equipe" icon={<Users size={22} />} title="Équipe" sub={`${team.length} membre${team.length > 1 ? "s" : ""}`} />
         <Tile
