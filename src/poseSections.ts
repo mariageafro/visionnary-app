@@ -147,3 +147,12 @@ export function orderPoseSectionsByDay(project: Project): Project {
   const ordered = orderByDay(tops.map((t) => ({ title: t, items: itemsOf(t) })), stages);
   return writeOrder(project, ordered.flatMap((t) => [t, ...kids(t)]));
 }
+
+/** Place des sections (et leurs sous-sections) juste après `anchor`, sans toucher au reste de l'ordre. */
+export function placeSectionsAfter(project: Project, moved: string[], anchor: string): Project {
+  const flat = poseSectionTitles(project).filter((t) => !moved.includes(t));
+  const at = flat.indexOf(anchor);
+  if (at < 0) return project;
+  flat.splice(at + 1, 0, ...moved);
+  return writeOrder(project, flat);
+}

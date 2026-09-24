@@ -265,7 +265,7 @@ export default function Shots() {
       const childIndex = children.findIndex((child) => child.title === sectionOf(i));
       return { ...i, id: crypto.randomUUID(), title: `${i.title} (copie)`, section: childIndex >= 0 ? childCopies[childIndex].title : title, sourceMediaId: i.sourceMediaId || mediaFor(media, i)?.id, status: "prévu", order: nextOrder(p, "shots") + index };
     });
-    update({ ...p, shotSections: [...configured, { id: parentId, title, order: configured.length, ...(parent?.parentId ? { parentId: parent.parentId } : {}) }, ...childCopies], items: [...p.items, ...copies] }, `Section « ${section} » dupliquée avec ses plans`);
+    update({ ...p, shotSections: [...configured, { id: parentId, title, order: parent ? parent.order + 0.5 : configured.length, ...(parent?.parentId ? { parentId: parent.parentId } : {}) }, ...childCopies], items: [...p.items, ...copies] }, `Section « ${section} » dupliquée avec ses plans`);
   };
   const toggleCollapsed = (section: string) => {
     const sections = [...configured]; const found = sections.find((s) => s.title === section);

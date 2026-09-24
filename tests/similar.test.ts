@@ -77,3 +77,15 @@ describe("ordre de la journée", () => {
     expect(out).toEqual(["Préparatifs", "Divers", "Accessoires", "Cérémonie", "Réception"]);
   });
 });
+
+import { placeSectionsAfter } from "../src/poseSections";
+describe("copie de section", () => {
+  it("se place juste sous l'original", () => {
+    let p = { ...newProject("t"), items: [] as ReturnType<typeof makeItem>[] };
+    for (const t of ["Accessoires", "Cortège"]) p = addPoseSection(p, t);
+    p = addPoseSection(p, "Mariée", "Accessoires");
+    p = addPoseSection(p, "Marié", "Accessoires");
+    p = addPoseSection(p, "Mariée (copie)", "Accessoires");
+    expect(poseSectionTitles(placeSectionsAfter(p, ["Mariée (copie)"], "Mariée"))).toEqual(["Accessoires", "Mariée", "Mariée (copie)", "Marié", "Cortège"]);
+  });
+});

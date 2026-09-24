@@ -11,7 +11,7 @@ import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories, uid } from "../model";
 import { listMedia, putMedia } from "../storage";
 import { operatorGuides } from "../operatorGuide";
-import { addPoseSection, orderPoseSectionsByDay, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
+import { addPoseSection, placeSectionsAfter, orderPoseSectionsByDay, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
@@ -157,6 +157,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
       nameFor.set(t, name);
       next = addPoseSection(next, name, parent ?? (t === title ? undefined : nameFor.get(title)));
     }
+    // La copie se glisse juste sous l'original (sous son dernier enfant pour une section entière), pas tout en bas.
+    next = placeSectionsAfter(next, titles.map((t) => nameFor.get(t)!), titles[titles.length - 1]);
     const source = p.items.filter((i) => i.module === "poses" && titles.includes(String(i.category || "Sans catégorie")));
     const idMap = new Map(source.map((i) => [i.id, uid()]));
     const allMedia = await listMedia(p.id);
