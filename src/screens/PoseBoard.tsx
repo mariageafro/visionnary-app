@@ -443,7 +443,6 @@ export function PoseViewer({ ids, start, onClose, onEdit }: { ids: string[]; sta
                   <Star size={12} fill="currentColor" /> Favori
                 </span>
               )}
-              {pose.priority === "MUST HAVE" && <span className="chip red">Essentiel photo</span>}
               {done(pose) && (
                 <span className="chip green">
                   <Check size={13} /> Réalisée

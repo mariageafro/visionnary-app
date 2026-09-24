@@ -14,6 +14,11 @@ export const angleOwners = (item: Item) => [item.id, ...list(item.includes)];
 export function seriesMedia(media: MediaEntry[], item: Item): MediaEntry[] {
   const owners = new Set(angleOwners(item));
   const own = media.filter((m) => owners.has(m.itemId) && !m.unsupported && /^(image|video)\//.test(m.type));
+  const order = list(item.angleOrder);
+  if (order.length) {
+    const rank = (m: MediaEntry) => (order.includes(m.id) ? order.indexOf(m.id) : order.length);
+    return [...own].sort((a, b) => rank(a) - rank(b));
+  }
   return [...own].sort((a, b) => Number(b.id === item.coverId) - Number(a.id === item.coverId));
 }
 

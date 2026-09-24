@@ -7,6 +7,7 @@ import { putMedia } from '../storage';
 import { mediaChanged, Thumb } from '../ui';
 import { mediaFor, VideoPreview } from './common';
 import { detachFromSeries, doneAngles, seriesMedia, toggleAngle } from '../merge';
+import { usePointerReorder } from '../reorder';
 import { PickFiles } from './MediaDrop';
 import './references.css';
 
@@ -14,7 +15,7 @@ export function referencesFor(media: MediaEntry[], item: Item) {
   const own = seriesMedia(media, item);
   const fallback = mediaFor(media, item);
   const list = own.length ? own : fallback ? [fallback] : [];
-  return [...list].sort((a,b) => Number(b.id === item.coverId) - Number(a.id === item.coverId));
+  return list;
 }
 
 /** Un geste horizontal change l'angle, jamais la mission. */
@@ -29,6 +30,12 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
   const taken = doneAngles(item);
   const takenCount = gallery.filter(m => taken.has(m.id)).length;
   const foreign = current && current.itemId !== item.id;
+  const dragAngle = usePointerReorder({ onDropTile: (dragged, target, zone) => {
+    const ids = gallery.map(m => m.id).filter(id => id !== dragged);
+    const at = ids.indexOf(target) + (zone === 'after' ? 1 : 0);
+    ids.splice(at, 0, dragged);
+    patchItem(item.id, { angleOrder: ids.join(','), coverId: ids[0] }, 'Ordre des angles changé');
+  } });
   const go = (step:number) => { const next=gallery[index+step]; if(next)setSelected(next.id); };
   async function upload(files: File[]) {
     if(busy)return;
@@ -48,7 +55,7 @@ export default function ReferenceGallery({ item, media }: { item: Item; media: M
       {current&&<span className="reference-count">Angle {index+1} / {gallery.length}{gallery.length>1?` · ${takenCount} pris`:''}</span>}
       {current&&taken.has(current.id)&&<span className="reference-taken"><Check size={14}/> Pris</span>}
     </div>
-    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={taken.has(m.id)?'is-taken':''} onClick={()=>setSelected(m.id)}><Thumb media={m}/>{taken.has(m.id)&&<span className="reference-tick"><Check size={12}/></span>}</button>)}</div>}
+    {gallery.length>1&&<div className="reference-strip">{gallery.map((m,n)=><button key={m.id} data-reorder={m.id} style={{touchAction:'none'}} onPointerDown={e=>{if(gallery.length>1)dragAngle(e,m.id);}} aria-label={`Voir l’angle ${n+1}`} aria-pressed={m.id===current?.id} className={taken.has(m.id)?'is-taken':''} onClick={()=>setSelected(m.id)}><Thumb media={m}/>{taken.has(m.id)&&<span className="reference-tick"><Check size={12}/></span>}</button>)}</div>}
     <div className="reference-tools">
       <PickFiles className="btn small" label={busy?'Import…':'Ajouter des angles'} onFiles={files=>void upload(files)}/>
       {current&&<button className={'btn small'+(taken.has(current.id)?' gold':'')} aria-pressed={taken.has(current.id)} onClick={()=>update({...project,items:project.items.map(i=>i.id===item.id?toggleAngle(i,current.id,gallery.length):i)},taken.has(current.id)?'Angle remis à faire':'Angle pris')}><Check size={14}/> {taken.has(current.id)?'Angle pris':'Marquer l’angle pris'}</button>}
