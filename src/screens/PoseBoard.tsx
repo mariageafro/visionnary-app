@@ -1,6 +1,7 @@
 import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery, { viewStyle } from "./ReferenceGallery";
+import FloatDock from "./FloatDock";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
@@ -246,7 +247,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       )}
 
-      {!selectMode && <button className="select-fab" onClick={() => { setSelectMode(true); setPicked([]); }} title="Sélectionner plusieurs photos (ou ⌘/Ctrl/Maj + clic)"><Layers size={18} /> Sélectionner</button>}
+      <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>

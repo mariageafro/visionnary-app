@@ -1,3 +1,4 @@
+import FloatDock from "./FloatDock";
 import { useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
@@ -335,7 +336,7 @@ export default function Shots() {
         <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>
       </div>
-      {!selectMode && <button className="select-fab" onClick={() => { setSelectMode(true); setPicked([]); }} title="Sélectionner plusieurs plans"><Layers size={18} /> Sélectionner</button>}
+      <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
