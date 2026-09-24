@@ -86,7 +86,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   };
   const saveSectionTitle = (section: string) => {
     const next = renamePoseSection(p, section, renameDraft);
-    if (next === p && section !== renameDraft.trim()) return;
+    if (next === p && section !== renameDraft.trim()) { notify("Ce nom existe déjà ou n'est pas valable"); return; }
     if (next !== p) update(next, `Section photo « ${section} » renommée`);
     if (current === section) setFilter(`cat:${renameDraft.trim()}`);
     setRenaming("");
@@ -172,6 +172,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     const copies = source.map((i) => ({ ...i, id: idMap.get(i.id)!, category: nameFor.get(String(i.category || "Sans catégorie")), packKey: "", status: i.status === "archivé" ? "archivé" : "prévu", includes: remap(i.includes, idMap), mergedInto: i.mergedInto ? idMap.get(String(i.mergedInto)) ?? "" : "", anglesDone: "", coverId: i.coverId ? mediaMap.get(String(i.coverId)) ?? i.coverId : i.coverId, angleOrder: remap(i.angleOrder, mediaMap), angleHidden: remap(i.angleHidden, mediaMap) }));
     mediaChanged();
     update({ ...next, items: [...next.items, ...copies] }, `Section « ${title} » dupliquée${titles.length > 1 ? " avec ses sous-sections" : ""}`);
+    // Le nom de la copie s'édite tout de suite.
+    setRenaming(nameFor.get(title)!);
+    setRenameDraft(nameFor.get(title)!);
   }
   const dropPoseOnSection = (draggedId: string, section: string) => {
     if (!p.items.some((i) => i.id === draggedId)) {
@@ -347,7 +350,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small" aria-label={`Masquer ${section}`} title="Masquer cette section (réaffichable)" onClick={() => update(setPoseSectionHidden(p, section, true), `Section « ${section} » masquée`)}><EyeOff size={15} /></button>}
               {cut.length > 0 && section !== "Masquées" && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
-              {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{parentTitleOf(p, section) && <small className="sub-parent">{parentTitleOf(p, section)} › </small>}{section}</strong>}
+              {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus onFocus={(event) => event.currentTarget.select()} aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong onDoubleClick={() => { if (section !== "À faire absolument" && section !== "Masquées") { setRenaming(section); setRenameDraft(section); } }} title="Double-clic pour renommer">{parentTitleOf(p, section) && <small className="sub-parent">{parentTitleOf(p, section)} › </small>}{section}</strong>}
               <span>{list.filter(done).length}/{list.length}</span>
               {section !== "À faire absolument" && section !== "Masquées" && <SectionProgress items={[...list, ...sections.filter(([c]) => parentTitleOf(p, c) === section).flatMap(([, l]) => l)]} media={media} />}
               <div className="pose-section-actions">
