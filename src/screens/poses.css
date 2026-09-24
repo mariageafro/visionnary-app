@@ -258,3 +258,10 @@
 body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 .sim-panel{display:grid;gap:10px;margin:0 0 12px;padding:14px}.sim-panel .choices{display:flex;gap:8px}
 .pose-ungroup{position:absolute;left:8px;top:78px;z-index:6;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#000b;border:1px solid #ffffff77;color:#fff}
+
+.pose-angles{left:8px;top:48px;padding:6px 12px 6px 10px;font-size:13px;gap:6px;background:var(--gold);color:var(--gold-ink);border:2px solid #fff;box-shadow:0 4px 14px #000c,0 0 0 0 var(--gold);animation:angles-pulse 1.8s ease-out infinite}
+.pose-angles b{font-size:17px;line-height:1}
+.pose-angles.is-complete{background:var(--green);color:#fff;animation:none}
+@keyframes angles-pulse{0%{box-shadow:0 4px 14px #000c,0 0 0 0 #d4af37cc}70%{box-shadow:0 4px 14px #000c,0 0 0 12px #d4af3700}100%{box-shadow:0 4px 14px #000c,0 0 0 0 #d4af3700}}
+@media (prefers-reduced-motion:reduce){.pose-angles{animation:none}}
+.pose-ungroup{top:90px}
