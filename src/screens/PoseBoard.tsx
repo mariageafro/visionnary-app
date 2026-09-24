@@ -39,6 +39,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [selectMode, setSelectMode] = useState(false);
   const [autoSimilar, setAutoSimilar] = useState(() => { try { return localStorage.getItem("visionnary-auto-similar") === "1"; } catch { return false; } });
   const [similarBusy, setSimilarBusy] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
+  const [simLevel, setSimLevel] = useState(() => { try { return Number(localStorage.getItem("visionnary-sim-level")) || 14; } catch { return 14; } });
+  const [simAcross, setSimAcross] = useState(false);
   const hashes = useRef(new Map<string, string>());
   const [picked, setPicked] = useState<string[]>([]);
   const [editing, setEditing] = useState<Item | null>(null);
@@ -140,7 +143,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     try {
       const singles = all.filter((i) => !i.mergedInto && i.status !== "archivé" && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m && x.m.type.startsWith("image/"));
       const byCategory = new Map<string, typeof singles>();
-      for (const x of singles) byCategory.set(categoryOf(x.item), [...(byCategory.get(categoryOf(x.item)) ?? []), x]);
+      const keyOf = (i: Item) => (simAcross ? "*" : categoryOf(i));
+      for (const x of singles) byCategory.set(keyOf(x.item), [...(byCategory.get(keyOf(x.item)) ?? []), x]);
       const groups: string[][] = [];
       for (const list of byCategory.values()) {
         const map = new Map<string, string>();
@@ -149,9 +153,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           if (!h) { h = await imageHash(m.thumbnail ?? m.blob); if (h) hashes.current.set(m.id, h); }
           if (h) map.set(item.id, h);
         }
-        groups.push(...groupSimilar(map, 8));
+        groups.push(...groupSimilar(map, simLevel));
       }
-      if (!groups.length) { if (!auto) notify("Aucune photo qui se ressemble."); return; }
+      if (!groups.length) { if (!auto) notify(`Aucune photo similaire parmi ${singles.length} analysées${singles.length !== all.length ? "" : ""} — essayez « Large ».`); return; }
       if (!auto && !window.confirm(`${groups.length} groupe(s) de photos similaires trouvé(s) (${groups.reduce((n, g) => n + g.length, 0)} photos). Les regrouper en séries d'angles ? (annulable)`)) return;
       let items = p.items;
       for (const g of groups) items = mergeIntoSeries(items, g[0], g.slice(1)) ?? items;
@@ -198,8 +202,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
             </button>
           )}
           <button className={"btn" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs photos pour les regrouper en une série"><Layers size={16} /> <span className="hide-narrow">{selectMode ? "Terminer" : "Sélectionner"}</span></button>
-          <button className={"btn" + (autoSimilar ? " gold" : "")} aria-pressed={autoSimilar} disabled={similarBusy} onClick={() => void groupSimilarPhotos(false)} onContextMenu={(e) => { e.preventDefault(); toggleAutoSimilar(); }} title="Regrouper les photos qui se ressemblent (clic droit : automatique)"><Layers size={16} /> <span className="hide-narrow">{similarBusy ? "Analyse…" : "Similaires"}</span></button>
-          <label className="btn small sim-auto" title="Regroupe automatiquement les nouvelles photos similaires"><input type="checkbox" checked={autoSimilar} onChange={toggleAutoSimilar} /> Auto</label>
+          <button className={"btn" + (autoSimilar || simOpen ? " gold" : "")} aria-pressed={simOpen} onClick={() => setSimOpen(!simOpen)} title="Regrouper automatiquement les photos qui se ressemblent"><Layers size={16} /> <span className="hide-narrow">Similaires</span></button>
           <button className="btn" onClick={() => navigate("/bibliotheque")} title="Piocher des poses dans la bibliothèque"><Images size={16} /> <span className="hide-narrow">Bibliothèque</span></button>
           <button className="icon-btn" aria-label={layout === "grid" ? "Passer en mode carrousel" : "Passer en mode grille"} title={layout === "grid" ? "Vue carrousel (glisser à gauche/droite)" : "Vue grille"} onClick={() => setLayout(layout === "grid" ? "carousel" : "grid")}>
             {layout === "grid" ? <GalleryHorizontal size={18} /> : <LayoutGrid size={18} />}
@@ -248,6 +251,20 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
       )}
 
       <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
+      {simOpen && (
+        <div className="card sim-panel">
+          <strong>Regrouper les photos qui se ressemblent</strong>
+          <p className="muted">Même angle, même pose, ou petit changement (une autre expression, un léger déplacement). Vous pourrez tout modifier ensuite, et annuler d'un clic.</p>
+          <div className="choices">
+            {([[8, "Strict"], [14, "Moyen"], [20, "Large"]] as const).map(([v, label]) => (
+              <button key={v} type="button" className={"choice" + (simLevel === v ? " on" : "")} onClick={() => { setSimLevel(v); try { localStorage.setItem("visionnary-sim-level", String(v)); } catch { /* non mémorisé */ } }}>{label}</button>
+            ))}
+          </div>
+          <label className="sim-auto"><input type="checkbox" checked={simAcross} onChange={(e) => setSimAcross(e.target.checked)} /> Comparer aussi entre les sections</label>
+          <label className="sim-auto"><input type="checkbox" checked={autoSimilar} onChange={toggleAutoSimilar} /> Automatique pour les nouvelles photos</label>
+          <button className="btn gold full" disabled={similarBusy} onClick={() => void groupSimilarPhotos(false)}>{similarBusy ? "Analyse en cours…" : "Analyser et regrouper"}</button>
+        </div>
+      )}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
@@ -255,6 +272,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className="btn gold" disabled={picked.length < 2} onClick={mergePicked}><Layers size={16} /> Regrouper en une série</button>
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
         </div>
@@ -265,6 +283,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <section key={section} data-reorder-section={section} className={dragTarget === section ? "pose-drop-target" : ""} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).some((type) => type === poseDragType || type === "Files")) { event.preventDefault(); setDragTarget(section); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(""); }} onDrop={(event) => dropOnSection(event, section)}>
             <div className="section-title pose-section-head">
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
+              {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{section}</strong>}
               <span>{list.filter(done).length}/{list.length}</span>
               <div className="pose-section-actions">

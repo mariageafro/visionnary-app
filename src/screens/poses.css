@@ -256,3 +256,4 @@
 .dock-btn{display:inline-flex;gap:6px;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;background:var(--bg-3);color:var(--text);border:1px solid var(--line);box-shadow:0 8px 24px #000a;font-weight:700}
 .dock-btn.wide,.dock-btn.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
+.sim-panel{display:grid;gap:10px;margin:0 0 12px;padding:14px}.sim-panel .choices{display:flex;gap:8px}

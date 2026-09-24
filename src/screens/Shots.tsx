@@ -344,6 +344,7 @@ export default function Shots() {
           <button className="btn gold" disabled={picked.length < 2} onClick={() => dropShotOnShot(picked[0], picked[0], "merge", picked.slice(1))}><Layers size={16} /> Regrouper en une série</button>
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
         </div>
@@ -372,6 +373,7 @@ export default function Shots() {
                 <span className="shot-section-grip" role="button" tabIndex={0} title={"Glisser pour réordonner « " + section + " »"} onPointerDown={(event) => dragShot(event, section)}><GripVertical size={16} /></span>
                 <button className="icon-btn small" aria-label={`${sectionConfig?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => toggleCollapsed(section)}>{sectionConfig?.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button>
                 <span>{section}</span>
+                {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
                 <span>
                   {list.filter(done).length}/{list.length}
                 </span>
