@@ -150,6 +150,8 @@ export interface MediaEntry {
   height?: number;
   duration?: number;
   unsupported?: boolean;
+  /** Zoom et cadrage choisis : z ≥ 1, x/y = centre affiché en % de l'image. */
+  view?: { z: number; x: number; y: number };
 }
 export interface ModuleProps {
   project: Project;

@@ -335,6 +335,7 @@ export default function Shots() {
         <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>
       </div>
+      {!selectMode && <button className="select-fab" onClick={() => { setSelectMode(true); setPicked([]); }} title="Sélectionner plusieurs plans"><Layers size={18} /> Sélectionner</button>}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
@@ -343,6 +344,7 @@ export default function Shots() {
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
+          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
         </div>
       )}
       <div className="shot-results">

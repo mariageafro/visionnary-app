@@ -1,6 +1,7 @@
 import QuickStatus from "./QuickStatus";
 import "./missions.css";
-import ReferenceGallery from "./ReferenceGallery";
+import ReferenceGallery, { viewStyle } from "./ReferenceGallery";
+import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
@@ -26,7 +27,7 @@ const poseDragType = "application/x-visionnary-pose";
  * Sur tout le mariage (/m/poses) ou dans une étape.
  */
 export default function PoseBoard({ stageId, embedded = false }: { stageId?: string; embedded?: boolean }) {
-  const { project: p, patchItem, update } = useProject();
+  const { project: p, patchItem, update, notify } = useProject();
   const media = useMedia(p.id);
   const importer = useImporter();
   const [selectedStage,setSelectedStage] = useState("");
@@ -35,6 +36,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [reorder, setReorder] = useState(false);
   const [layout, setLayout] = useState<"grid" | "carousel">("grid");
   const [selectMode, setSelectMode] = useState(false);
+  const [autoSimilar, setAutoSimilar] = useState(() => { try { return localStorage.getItem("visionnary-auto-similar") === "1"; } catch { return false; } });
+  const [similarBusy, setSimilarBusy] = useState(false);
+  const hashes = useRef(new Map<string, string>());
   const [picked, setPicked] = useState<string[]>([]);
   const [editing, setEditing] = useState<Item | null>(null);
   const [viewer, setViewer] = useState<{ ids: string[]; start: number } | null>(null);
@@ -127,6 +131,34 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     if (section === "À faire absolument") patchItem(draggedId, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else if (section !== "Masquées") patchItem(draggedId, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
   };
+
+  /** Regroupe en séries les photos d'une même section qui se ressemblent (même angle, même pose). */
+  async function groupSimilarPhotos(auto: boolean) {
+    if (similarBusy) return;
+    setSimilarBusy(true);
+    try {
+      const singles = all.filter((i) => !i.mergedInto && i.status !== "archivé" && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m && x.m.type.startsWith("image/"));
+      const byCategory = new Map<string, typeof singles>();
+      for (const x of singles) byCategory.set(categoryOf(x.item), [...(byCategory.get(categoryOf(x.item)) ?? []), x]);
+      const groups: string[][] = [];
+      for (const list of byCategory.values()) {
+        const map = new Map<string, string>();
+        for (const { item, m } of list) {
+          let h = hashes.current.get(m.id) ?? null;
+          if (!h) { h = await imageHash(m.thumbnail ?? m.blob); if (h) hashes.current.set(m.id, h); }
+          if (h) map.set(item.id, h);
+        }
+        groups.push(...groupSimilar(map, 8));
+      }
+      if (!groups.length) { if (!auto) notify("Aucune photo qui se ressemble."); return; }
+      if (!auto && !window.confirm(`${groups.length} groupe(s) de photos similaires trouvé(s) (${groups.reduce((n, g) => n + g.length, 0)} photos). Les regrouper en séries d'angles ? (annulable)`)) return;
+      let items = p.items;
+      for (const g of groups) items = mergeIntoSeries(items, g[0], g.slice(1)) ?? items;
+      update({ ...p, items }, `${groups.length} série(s) créée(s) à partir de photos similaires`);
+    } finally { setSimilarBusy(false); }
+  }
+  const toggleAutoSimilar = () => { const next = !autoSimilar; setAutoSimilar(next); try { localStorage.setItem("visionnary-auto-similar", next ? "1" : "0"); } catch { /* préférence non mémorisée */ } if (next) void groupSimilarPhotos(false); };
+  useEffect(() => { if (autoSimilar && media.length) void groupSimilarPhotos(true); }, [autoSimilar, media.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const dragPose = usePointerReorder({ onDropTile: dropOnPose, onDropSection: dropPoseOnSection, groupOf: (id) => (selectMode && picked.includes(id) ? picked : [id]) });
   const mergePicked = () => {
     if (picked.length < 2) return;
@@ -165,6 +197,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
             </button>
           )}
           <button className={"btn" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs photos pour les regrouper en une série"><Layers size={16} /> <span className="hide-narrow">{selectMode ? "Terminer" : "Sélectionner"}</span></button>
+          <button className={"btn" + (autoSimilar ? " gold" : "")} aria-pressed={autoSimilar} disabled={similarBusy} onClick={() => void groupSimilarPhotos(false)} onContextMenu={(e) => { e.preventDefault(); toggleAutoSimilar(); }} title="Regrouper les photos qui se ressemblent (clic droit : automatique)"><Layers size={16} /> <span className="hide-narrow">{similarBusy ? "Analyse…" : "Similaires"}</span></button>
+          <label className="btn small sim-auto" title="Regroupe automatiquement les nouvelles photos similaires"><input type="checkbox" checked={autoSimilar} onChange={toggleAutoSimilar} /> Auto</label>
           <button className="btn" onClick={() => navigate("/bibliotheque")} title="Piocher des poses dans la bibliothèque"><Images size={16} /> <span className="hide-narrow">Bibliothèque</span></button>
           <button className="icon-btn" aria-label={layout === "grid" ? "Passer en mode carrousel" : "Passer en mode grille"} title={layout === "grid" ? "Vue carrousel (glisser à gauche/droite)" : "Vue grille"} onClick={() => setLayout(layout === "grid" ? "carousel" : "grid")}>
             {layout === "grid" ? <GalleryHorizontal size={18} /> : <LayoutGrid size={18} />}
@@ -212,6 +246,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       )}
 
+      {!selectMode && <button className="select-fab" onClick={() => { setSelectMode(true); setPicked([]); }} title="Sélectionner plusieurs photos (ou ⌘/Ctrl/Maj + clic)"><Layers size={18} /> Sélectionner</button>}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
@@ -220,6 +255,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
+          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
         </div>
       )}
 
@@ -251,9 +287,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 const taken = series.filter((m) => doneAngles(pose).has(m.id)).length;
                 return (
                   <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")} data-reorder={pose.id} data-merge="">
-                    <button type="button" className="pose-media" onClick={() => (selectMode ? setPicked((current) => (current.includes(pose.id) ? current.filter((x) => x !== pose.id) : [...current, pose.id])) : setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) }))} aria-label={"Voir la pose " + (pose.title || "")}>
+                    <button type="button" className="pose-media" onClick={(event) => (selectMode || event.metaKey || event.ctrlKey || event.shiftKey ? (setSelectMode(true),  setPicked((current) => (current.includes(pose.id) ? current.filter((x) => x !== pose.id) : [...current, pose.id]))) : setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) }))} aria-label={"Voir la pose " + (pose.title || "")}>
                       <span className="pose-frame">
-                        {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}
+                        {thumb ? <span className="pose-zoom" style={viewStyle(thumb)}><Thumb media={thumb} className="pose-thumb" /></span> : <span className="pose-empty"><Heart size={28} /></span>}
                       </span>
                       {isVideo && Number(thumb?.duration) > 0 && (
                         <span className="chip dark insp-duration pose-duration">
