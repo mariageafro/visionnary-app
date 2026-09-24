@@ -41,6 +41,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [renaming, setRenaming] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
   const [dragTarget, setDragTarget] = useState("");
+  const [overId, setOverId] = useState("");
   const [photoGuide, setPhotoGuide] = useState(p.operatorGuide?.photo ?? operatorGuides.photo.tips.join("\n"));
   const queueImport = (files: File[], category = "", essential = false) => { setPendingCategory(category); setPendingEssential(essential); setPending(files); };
   const dragging = useFileDrop((files) => queueImport(files), !embedded);
@@ -99,6 +100,26 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     if (!id) return;
     if (section === "À faire absolument") patchItem(id, { priority: "MUST HAVE" }, "Pose ajoutée aux essentiels photo");
     else patchItem(id, { category: section === "Sans catégorie" ? undefined : section }, `Pose déplacée vers « ${section} »`);
+  };
+  // Glisser une pose sur une autre : elle prend sa place (vers la droite/le bas elle passe après, sinon avant),
+  // dans la même section comme d'une section à l'autre. Un seul pas d'historique, sans toucher aux autres poses.
+  const dropOnTile = (event: DragEvent<HTMLElement>, target: Item, list: Item[]) => {
+    if (!Array.from(event.dataTransfer.types).includes(poseDragType)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOverId("");
+    setDragTarget("");
+    const id = event.dataTransfer.getData(poseDragType);
+    const dragged = all.find((i) => i.id === id) ?? p.items.find((i) => i.id === id);
+    if (!dragged || dragged.id === target.id) return;
+    const from = list.findIndex((i) => i.id === dragged.id);
+    const rest = list.filter((i) => i.id !== dragged.id);
+    const at = rest.findIndex((i) => i.id === target.id);
+    const inserted = [...rest.slice(0, at + (from >= 0 && from < list.findIndex((i) => i.id === target.id) ? 1 : 0)), dragged, ...rest.slice(at + (from >= 0 && from < list.findIndex((i) => i.id === target.id) ? 1 : 0))];
+    const slots = inserted.map((i) => i.order).sort((a, b) => a - b);
+    const newOrder = new Map(inserted.map((i, n) => [i.id, slots[n]]));
+    const category = target.category;
+    update({ ...p, items: p.items.map((i) => (newOrder.has(i.id) ? { ...i, order: newOrder.get(i.id)!, ...(i.id === dragged.id && from < 0 ? { category } : {}) } : i)) }, from >= 0 ? "Ordre des poses modifié" : `Pose déplacée vers « ${categoryOf(target)} »`);
   };
   // Réordonner : on échange l'ordre avec la voisine de la même section, sans toucher aux autres.
   const move = (list: Item[], item: Item, step: number) => {
@@ -202,7 +223,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 const op = operators.get(String(pose.operatorId));
                 const isVideo = thumb?.type.startsWith("video/");
                 return (
-                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "")}>
+                  <div key={pose.id} className={"pose-tile" + (done(pose) ? " is-done" : "") + (pose.favorite === true ? " is-fav" : "") + (overId === pose.id ? " is-over" : "")} onDragOver={(event) => { if (Array.from(event.dataTransfer.types).includes(poseDragType)) { event.preventDefault(); event.stopPropagation(); if (overId !== pose.id) setOverId(pose.id); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOverId(""); }} onDrop={(event) => dropOnTile(event, pose, list)}>
                     <button type="button" className="pose-media" onClick={() => setViewer({ ids: order.map((i) => i.id), start: order.findIndex((i) => i.id === pose.id) })} aria-label={"Voir la pose " + (pose.title || "")}>
                       <span className="pose-frame">
                         {thumb ? <Thumb media={thumb} className="pose-thumb" /> : <span className="pose-empty"><Heart size={28} /></span>}

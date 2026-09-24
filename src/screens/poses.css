@@ -226,3 +226,5 @@
     grid-template-columns: 70px 180px 220px;
   }
 }
+
+.pose-tile.is-over{outline:3px solid var(--gold);outline-offset:3px;border-radius:12px}
