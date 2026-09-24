@@ -76,7 +76,15 @@ export interface EstimateSettings {
   multicam?: boolean;
   operators?: number;
 }
+export interface ActivityLogEntry {
+  t: string;
+  who: string;
+  text: string;
+  itemId?: string;
+}
 export interface Project {
+  /** Journal léger des actions de l'équipe (qui a fait quoi, quand). */
+  activity?: ActivityLogEntry[];
   alerts?: { enabled:boolean; sound:boolean; vibration:boolean; notifications:boolean; thresholds:number[] };
   id: string;
   name: string;

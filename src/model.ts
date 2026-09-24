@@ -3,7 +3,7 @@ import { clonePlan } from "./scene/ops";
 import { interviewTypes } from "./interviews";
 
 export const uid = () => crypto.randomUUID();
-export const done = (i: Item) => ["tourné", "excellent", "terminé", "vérifié", "livré"].includes(i.status);
+export const done = (i: Item) => ["tourné", "excellent", "terminé", "vérifié", "livré", "fait"].includes(i.status);
 export const statuses = [
   "prévu",
   "prêt",

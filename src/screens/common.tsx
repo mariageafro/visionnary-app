@@ -47,7 +47,7 @@ export function AddressLinks({ address }: { address?: string }) {
 }
 
 export const itemsOf = (p: Project, module: ModuleId, archived = false) =>
-  p.items.filter((i) => i.module === module && (archived || i.status !== "archivé")).sort((a, b) => a.order - b.order);
+  p.items.filter((i) => i.module === module && (archived || i.status !== "archivé") && !(module === "inspirations" && i.refSource === "couple")).sort((a, b) => a.order - b.order);
 export const titleOf = (p: Project, id: unknown) => (id ? p.items.find((i) => i.id === id)?.title : undefined);
 export const nextOrder = (p: Project, module: ModuleId) =>
   Math.max(-1, ...p.items.filter((i) => i.module === module).map((i) => i.order)) + 1;

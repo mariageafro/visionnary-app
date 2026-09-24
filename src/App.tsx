@@ -51,6 +51,7 @@ import Coverage from "./screens/Coverage";
 import Sde from "./screens/Sde";
 import Teaser from "./screens/Teaser";
 import Library from "./screens/Library";
+import References from "./screens/References";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
@@ -169,6 +170,7 @@ const side = [
   ["/tournages", "Mes tournages", Clapperboard],
   ["/deroule", "Déroulé du jour J", Clock3],
   ["/m/shots", "Plans & scènes", Images],
+  ["/m/references", "Références du couple", Clapperboard],
   ["/m/poses", "Galerie photographe", Camera],
   ["/bibliotheque", "Bibliothèque de poses", Images],
   ["/checklist", "Checklist", ListChecks],
@@ -281,7 +283,7 @@ function Shell() {
         break;
       case "m":
         screen =
-          arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : arg === "sde" ? <Sde /> : arg === "teaser" ? <Teaser /> : <ModuleScreen key={arg} moduleId={arg} />;
+          arg === "references" ? <References /> : arg === "inspirations" ? <Inspirations /> : arg === "shots" ? <Shots /> : arg === "poses" ? <PoseBoard /> : arg === "sde" ? <Sde /> : arg === "teaser" ? <Teaser /> : <ModuleScreen key={arg} moduleId={arg} />;
         break;
       case "scenes":
       case "multicam":
