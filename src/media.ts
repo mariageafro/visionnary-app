@@ -17,12 +17,33 @@ function canvasBlob(source: CanvasImageSource, width: number, height: number): P
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? undefined), "image/jpeg", 0.78));
 }
 
+/** Décodage par une balise image : marche sur les anciennes tablettes où createImageBitmap n'existe pas. */
+function imageInfoFallback(file: Blob): Promise<{ width: number; height: number; thumbnail?: Blob }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      const info = { width: img.naturalWidth, height: img.naturalHeight, thumbnail: undefined as Blob | undefined };
+      try { info.thumbnail = await canvasBlob(img, img.naturalWidth, img.naturalHeight); } catch { /* sans miniature */ }
+      URL.revokeObjectURL(url);
+      resolve(info);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image non lisible par ce navigateur")); };
+    img.src = url;
+  });
+}
+
 async function imageInfo(file: Blob) {
-  const bitmap = await createImageBitmap(file);
+  if (typeof createImageBitmap !== "function") return imageInfoFallback(file);
   try {
-    return { width: bitmap.width, height: bitmap.height, thumbnail: await canvasBlob(bitmap, bitmap.width, bitmap.height) };
-  } finally {
-    bitmap.close();
+    const bitmap = await createImageBitmap(file);
+    try {
+      return { width: bitmap.width, height: bitmap.height, thumbnail: await canvasBlob(bitmap, bitmap.width, bitmap.height) };
+    } finally {
+      bitmap.close?.();
+    }
+  } catch {
+    return imageInfoFallback(file);
   }
 }
 

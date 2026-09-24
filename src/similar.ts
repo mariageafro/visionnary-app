@@ -31,14 +31,14 @@ export function groupSimilar(hashes: Map<string, string>, threshold: number): st
 /** Empreinte 64 bits (16 caractères hexadécimaux) d'une image, ou null si elle ne se décode pas. */
 export async function imageHash(blob: Blob): Promise<string | null> {
   try {
-    const bitmap = await createImageBitmap(blob);
+    const bitmap = typeof createImageBitmap === "function" ? await createImageBitmap(blob) : await new Promise<HTMLImageElement>((res, rej) => { const u = URL.createObjectURL(blob); const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => rej(new Error("image")); im.src = u; });
     const canvas = document.createElement("canvas");
     canvas.width = 9;
     canvas.height = 8;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
     ctx.drawImage(bitmap, 0, 0, 9, 8);
-    bitmap.close?.();
+    (bitmap as ImageBitmap).close?.();
     const px = ctx.getImageData(0, 0, 9, 8).data;
     const gray = (x: number, y: number) => {
       const o = (y * 9 + x) * 4;
