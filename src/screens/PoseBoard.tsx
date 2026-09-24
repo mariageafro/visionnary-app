@@ -163,11 +163,11 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   };
 
   /** Regroupe en séries les photos d'une même section qui se ressemblent (même angle, même pose). */
-  async function groupSimilarPhotos(auto: boolean) {
+  async function groupSimilarPhotos(auto: boolean, only?: string) {
     if (similarBusy) return;
     setSimilarBusy(true);
     try {
-      const singles = all.filter((i) => !i.mergedInto && i.status !== "archivé" && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m && x.m.type.startsWith("image/"));
+      const singles = all.filter((i) => (!only || categoryOf(i) === only) && !i.mergedInto && i.status !== "archivé" && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m && x.m.type.startsWith("image/"));
       const byCategory = new Map<string, typeof singles>();
       const keyOf = (i: Item) => (simAcross ? "*" : categoryOf(i));
       for (const x of singles) byCategory.set(keyOf(x.item), [...(byCategory.get(keyOf(x.item)) ?? []), x]);
@@ -320,6 +320,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
               {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className={"icon-btn small" + (subFor === section ? " on" : "")} aria-label={`Ajouter une sous-section à ${section}`} title="Ajouter une sous-section" onClick={() => { setSubFor(subFor === section ? "" : section); setSubName(""); }}><FolderPlus size={15} /></button>}
+              {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small sec-tool" aria-label={`Regrouper les photos similaires de ${section}`} title="Regrouper automatiquement les photos similaires de cette section" disabled={similarBusy} onClick={() => void groupSimilarPhotos(false, section)}><Layers size={15} /></button>}
+              {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && list.some((i) => String(i.includes ?? "")) && <button className="icon-btn small sec-tool" aria-label={`Dégrouper toute la section ${section}`} title="Remettre chaque photo à part dans cette section" onClick={() => { if (window.confirm(`Dégrouper toutes les séries de « ${section} » ? Chaque photo redevient une pose à part.`)) update({ ...p, items: dissolveSeries(p.items, list.map((i) => i.id)) }, `Séries de « ${section} » dégroupées`); }}><Unlink size={15} /></button>}
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small" aria-label={`Masquer ${section}`} title="Masquer cette section (réaffichable)" onClick={() => update(setPoseSectionHidden(p, section, true), `Section « ${section} » masquée`)}><EyeOff size={15} /></button>}
               {cut.length > 0 && section !== "Masquées" && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}

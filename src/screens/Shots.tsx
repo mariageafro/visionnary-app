@@ -198,11 +198,11 @@ export default function Shots() {
     if (draggedId !== section) moveSectionTo(draggedId, section);
   };
   /** Regroupe en séries les vidéos (et photos) de plans qui se ressemblent. */
-  async function groupSimilarShots() {
+  async function groupSimilarShots(only?: string) {
     if (simBusy) return;
     setSimBusy(true);
     try {
-      const singles = active.filter((i) => !i.mergedInto && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m);
+      const singles = active.filter((i) => (!only || sectionOf(i) === only) && !i.mergedInto && !String(i.includes ?? "")).map((i) => ({ item: i, m: seriesMedia(media, i)[0] })).filter((x) => x.m);
       const buckets = new Map<string, typeof singles>();
       for (const x of singles) { const k = simAcross ? "*" : sectionOf(x.item); buckets.set(k, [...(buckets.get(k) ?? []), x]); }
       const groups: string[][] = [];
@@ -439,6 +439,8 @@ export default function Shots() {
                 <span className="shot-section-grip" role="button" tabIndex={0} title={"Glisser pour réordonner « " + section + " »"} onPointerDown={(event) => dragShot(event, section)}><GripVertical size={16} /></span>
                 <button className="icon-btn small" aria-label={`${sectionConfig?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => toggleCollapsed(section)}>{sectionConfig?.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button>
                 <span>{section}</span>
+                <button className="icon-btn small sec-tool" aria-label={`Regrouper les plans similaires de ${section}`} title="Regrouper automatiquement les plans similaires de cette section" disabled={simBusy} onClick={() => void groupSimilarShots(section)}><Layers size={15} /></button>
+                {list.some((i) => String(i.includes ?? "")) && <button className="icon-btn small sec-tool" aria-label={`Dégrouper toute la section ${section}`} title="Remettre chaque plan à part dans cette section" onClick={() => { if (window.confirm(`Dégrouper toutes les séries de « ${section} » ?`)) update({ ...p, items: dissolveSeries(p.items, list.map((i) => i.id)) }, `Séries de « ${section} » dégroupées`); }}><Unlink size={15} /></button>}
                 {cut.length > 0 && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
                 {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
                 <span>

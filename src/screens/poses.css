@@ -294,3 +294,4 @@ body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 .pose-section-head .icon-btn[aria-label^="Masquer "],.pose-section-head .icon-btn[aria-label^="Ajouter une sous-section"]{opacity:.3;transition:opacity .15s}
 .pose-section-head:hover .icon-btn[aria-label^="Masquer "],.pose-section-head:hover .icon-btn[aria-label^="Ajouter une sous-section"],.pose-section-head .icon-btn:focus-visible,.pose-section-head .icon-btn.on{opacity:1}
 @media (pointer:coarse){.pose-section-head .icon-btn[aria-label^="Masquer "],.pose-section-head .icon-btn[aria-label^="Ajouter une sous-section"]{opacity:.55}}
+.sec-tool{opacity:.3;transition:opacity .15s}.section-title:hover .sec-tool,.pose-section-head:hover .sec-tool,.sec-tool:focus-visible{opacity:1}@media (pointer:coarse){.sec-tool{opacity:.55}}
