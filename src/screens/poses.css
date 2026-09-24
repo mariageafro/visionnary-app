@@ -271,3 +271,5 @@ body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 .pose-angles.is-complete{background:#000a;color:#7ddc9a;border-color:#7ddc9a;animation:none}
 @keyframes angles-blink{0%,55%,100%{opacity:1}75%{opacity:.25}}
 .pose-ungroup{top:70px;width:24px;height:24px}
+.dock-jump{display:grid;gap:2px;max-height:55vh;overflow:auto;min-width:200px;max-width:min(320px,80vw);padding:6px;border-radius:14px;background:var(--bg-3);border:1px solid var(--gold-2);box-shadow:0 10px 30px #000c}
+.dock-jump button{text-align:left;padding:9px 12px;border-radius:9px;background:none;color:var(--text);border:0;font-weight:600;min-height:40px}.dock-jump button:hover{background:var(--gold);color:var(--gold-ink)}

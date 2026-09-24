@@ -10,7 +10,7 @@ import { isDroneShot, isPhotoShot, isVideoShot } from "../stageStats";
 import { withOrder } from "../features";
 import { linkShotsToStages, professionalShotList, shotListCount } from "../shotlist";
 import { useProject } from "../store";
-import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
+import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
@@ -164,10 +164,18 @@ export default function Shots() {
       const merged = mergeIntoSeries(p.items, targetId, ids);
       if (!merged) return;
       update({ ...p, items: merged.map((item) => (item.id === targetId && !item.coverId ? { ...item, coverId: mediaFor(media, dragged)?.id } : item)) }, ids.length > 1 ? `${ids.length} plans ajoutés comme angles de « ${target.title} »` : `« ${dragged.title} » ajouté comme angle de « ${target.title} »`);
-      setPicked([]);
+      setPicked([]); setSelectMode(false);
       return;
     }
     const list = items.filter((item) => sectionOf(item) === sectionOf(target));
+    if (ids.length > 1) {
+      const moved = order.filter((i) => ids.includes(i.id));
+      const block = reorderBlock(list, moved, targetId, zone === "after" ? "after" : "before");
+      if (!block) return;
+      update({ ...p, items: p.items.map((item) => (block.orders.has(item.id) ? { ...item, order: block.orders.get(item.id)!, ...(block.crossed.has(item.id) ? { section: sectionOf(target) } : {}) } : item)) }, `${moved.length} plans déplacés`);
+      setPicked([]); setSelectMode(false);
+      return;
+    }
     const result = reorderOnDrop(list, draggedId, targetId, dragged, zone);
     if (!result) return;
     update({ ...p, items: p.items.map((item) => (result.orders.has(item.id) ? { ...item, order: result.orders.get(item.id)!, ...(item.id === draggedId && result.crossed ? { section: sectionOf(target) } : {}) } : item)) }, result.crossed ? `Plan déplacé vers « ${sectionOf(target)} »` : "Ordre des plans modifié");
@@ -369,7 +377,7 @@ export default function Shots() {
         <button className={"btn small" + (selectMode ? " gold" : "")} aria-pressed={selectMode} onClick={() => { setSelectMode(!selectMode); setPicked([]); }} title="Cocher plusieurs plans ou vidéos pour les regrouper en une série d'angles"><Layers size={15} /> {selectMode ? "Terminer" : "Sélectionner"}</button>
         <button className="btn small shot-motion" aria-pressed={motion} onClick={() => setMotion(!motion)}>{motion ? <Pause size={15} /> : <Play size={15} />}{motion ? "Figer" : "Animer"}</button>
       </div>
-      <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
+      <FloatDock onExit={() => { setSelectMode(false); setPicked([]); }} selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
       {simOpen && (
         <div className="card sim-panel">
           <strong>Regrouper les plans qui se ressemblent</strong>
@@ -388,12 +396,12 @@ export default function Shots() {
           <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
           <span className="muted">Glissez-en un sur le centre d'un autre pour l'ajouter comme angle, ou regroupez.</span>
           <button className="btn gold" disabled={picked.length < 2} onClick={() => dropShotOnShot(picked[0], picked[0], "merge", picked.slice(1))}><Layers size={16} /> Regrouper en une série</button>
-          <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
-          <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
-          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); }}><Unlink size={16} /> Dégrouper</button>
+          <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); setSelectMode(false); }}><EyeOff size={16} /> Masquer / réafficher</button>
+          <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); setSelectMode(false); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); setSelectMode(false); }}><Unlink size={16} /> Dégrouper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
-          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
+          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); setSelectMode(false); }}>Terminer</button>
         </div>
       )}
       <div className="shot-results">

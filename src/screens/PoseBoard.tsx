@@ -11,7 +11,7 @@ import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
-import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
+import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
 import { Empty, MediaViewer, Screen, Thumb, navigate, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
@@ -124,6 +124,14 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
       if (!items) return;
       update({ ...p, items: items.map((i) => (i.id === targetId && !i.coverId ? { ...i, coverId: mediaFor(media, p.items.find((x) => x.id === ids[0])!)?.id } : i)) }, ids.length > 1 ? `${ids.length} poses ajoutées comme angles de « ${target.title} »` : `« ${p.items.find((x) => x.id === draggedId)?.title} » ajoutée comme angle de « ${target.title} »`);
       setPicked([]);
+      return;
+    }
+    if (ids.length > 1) {
+      const moved = order.filter((i) => ids.includes(i.id));
+      const block = reorderBlock(list, moved, targetId, zone === "after" ? "after" : "before");
+      if (!block) return;
+      update({ ...p, items: p.items.map((i) => (block.orders.has(i.id) ? { ...i, order: block.orders.get(i.id)!, ...(block.crossed.has(i.id) && !["À faire absolument", "Masquées"].includes(String(target.category ?? "")) ? { category: target.category } : {}) } : i)) }, `${moved.length} poses déplacées`);
+      setPicked([]); setSelectMode(false);
       return;
     }
     const dragged = p.items.find((i) => i.id === draggedId && i.module === "poses");
@@ -251,7 +259,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
         </div>
       )}
 
-      <FloatDock selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
+      <FloatDock onExit={() => { setSelectMode(false); setPicked([]); }} selectMode={selectMode} onSelect={() => { setSelectMode(true); setPicked([]); }} />
       {simOpen && (
         <div className="card sim-panel">
           <strong>Regrouper les photos qui se ressemblent</strong>
@@ -271,12 +279,12 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
           <span className="muted">Glissez-en une sur le centre d'une autre pour l'ajouter comme angle, ou regroupez.</span>
           <button className="btn gold" disabled={picked.length < 2} onClick={mergePicked}><Layers size={16} /> Regrouper en une série</button>
-          <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
-          <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
-          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); }}><Unlink size={16} /> Dégrouper</button>
+          <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); setSelectMode(false); }}><EyeOff size={16} /> Masquer / réafficher</button>
+          <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); setSelectMode(false); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); setSelectMode(false); }}><Unlink size={16} /> Dégrouper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
-          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
+          <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); setSelectMode(false); }}>Terminer</button>
         </div>
       )}
 

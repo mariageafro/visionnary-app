@@ -57,6 +57,45 @@ import Spatial from "./Spatial";
 import PreEdit from "./PreEdit";
 import SyncPanel from "./SyncPanel";
 
+const RESUME = "visionnary-resume";
+/** Retient l'écran et la position de défilement ; à la réouverture on revient exactement où on s'était arrêté. */
+function useResume() {
+  useEffect(() => {
+    let saved: { hash: string; y: number } | null = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(RESUME) ?? "null");
+    } catch {
+      saved = null;
+    }
+    if (saved && (!location.hash || location.hash === "#/accueil") && saved.hash && saved.hash !== "#/accueil") location.hash = saved.hash;
+    if (saved && saved.y > 0) {
+      let tries = 0;
+      const timer = window.setInterval(() => {
+        window.scrollTo(0, saved!.y);
+        document.querySelector(".main")?.scrollTo(0, saved!.y);
+        if (++tries > 12 || Math.abs(window.scrollY - saved!.y) < 4) window.clearInterval(timer);
+      }, 250);
+    }
+    let pending = 0;
+    const save = () => {
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        try {
+          localStorage.setItem(RESUME, JSON.stringify({ hash: location.hash, y: Math.round(window.scrollY || (document.querySelector(".main")?.scrollTop ?? 0)) }));
+        } catch {
+          /* position non mémorisée */
+        }
+      }, 300);
+    };
+    window.addEventListener("scroll", save, true);
+    window.addEventListener("hashchange", save);
+    return () => {
+      window.removeEventListener("scroll", save, true);
+      window.removeEventListener("hashchange", save);
+    };
+  }, []);
+}
+
 function useRoute() {
   const read = () => (location.hash.replace(/^#/, "") || "/accueil").split("?")[0];
   const [route, setRoute] = useState(read);
@@ -142,6 +181,7 @@ const side = [
 function Shell() {
   const store = useStore();
   const route = useRoute();
+  useResume();
   const [mode, setMode] = useMode();
   const [theme, setTheme] = useTheme();
   const { w, project, toast, undo, redo, notify } = store;

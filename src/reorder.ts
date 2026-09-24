@@ -19,6 +19,24 @@ export function reorderOnDrop<T extends { id: string; order: number }>(list: T[]
   return { orders: new Map(ordered.map((item, n) => [item.id, slots[n]])), crossed: from < 0 };
 }
 
+/**
+ * Déplace plusieurs éléments d'un bloc : ils s'insèrent, dans leur ordre d'affichage, avant ou après `targetId`.
+ * Les valeurs `order` sont redistribuées entre ces seuls éléments (ceux de la liste + ceux qui arrivent d'ailleurs).
+ */
+export function reorderBlock<T extends { id: string; order: number }>(list: T[], moved: T[], targetId: string, place: "before" | "after"): { orders: Map<string, number>; crossed: Set<string> } | null {
+  const ids = new Set(moved.map((m) => m.id));
+  if (!moved.length || ids.has(targetId)) return null;
+  const rest = list.filter((item) => !ids.has(item.id));
+  const at = rest.findIndex((item) => item.id === targetId);
+  if (at < 0) return null;
+  const ordered = [...rest.slice(0, at + (place === "after" ? 1 : 0)), ...moved, ...rest.slice(at + (place === "after" ? 1 : 0))];
+  const slots = ordered.map((item) => item.order).sort((a, b) => a - b);
+  for (let n = 1; n < slots.length; n++) if (slots[n] <= slots[n - 1]) slots[n] = slots[n - 1] + 1;
+  const orders = new Map(ordered.map((item, n) => [item.id, slots[n]]));
+  const inList = new Set(list.map((i) => i.id));
+  return { orders, crossed: new Set(moved.filter((m) => !inList.has(m.id)).map((m) => m.id)) };
+}
+
 export type DropZone = "before" | "after" | "merge";
 interface Handlers {
   /**
