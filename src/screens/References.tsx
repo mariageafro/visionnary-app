@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Check, Layers, Search, Users, X } from "lucide-react";
+import { Check, ChevronDown, Layers, Search, Users, X } from "lucide-react";
+import SectionProgress from "./SectionProgress";
+import FloatDock from "./FloatDock";
 import type { Item } from "../types";
 import { useProject } from "../store";
 import { Empty, Screen, Sheet, Thumb, useMedia } from "../ui";
@@ -30,6 +32,8 @@ export default function References() {
   const [query, setQuery] = useState("");
   const [viewing, setViewing] = useState("");
   const [picking, setPicking] = useState(false);
+  const [collapsed, setCollapsed] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("visionnary-ref-collapsed") ?? "[]"); } catch { return []; } });
+  const toggleCollapsed = (st: string) => setCollapsed((c) => { const n = c.includes(st) ? c.filter((x) => x !== st) : [...c, st]; try { localStorage.setItem("visionnary-ref-collapsed", JSON.stringify(n)); } catch { /* non mémorisé */ } return n; });
   const [picked, setPicked] = useState<string[]>([]);
   const [who, setWho] = useState(() => { try { return localStorage.getItem("visionnary-who") ?? ""; } catch { return ""; } });
   const chooseWho = (name: string) => { setWho(name); try { localStorage.setItem("visionnary-who", name); } catch { /* non mémorisé */ } };
@@ -57,6 +61,30 @@ export default function References() {
     window.alert(`${left.length} plan(s) Must Have pas encore validé(s)${stage ? ` — ${stage}` : ""} :\n\n${left.map((i) => "• " + i.title).join("\n")}`);
   }
 
+  const renderCard = (i: Item) => {
+          const thumb = mediaFor(media, i);
+          const on = picked.includes(i.id);
+          const who_ = team.find((m) => m.id === i.assignee)?.title;
+          return (
+            <article key={i.id} className={"ref-card st-" + String(i.status).replace(/\s/g, "-") + (on ? " is-on" : "")}>
+              <button className="ref-media" onClick={() => (picking ? setPicked((c) => (c.includes(i.id) ? c.filter((x) => x !== i.id) : [...c, i.id])) : setViewing(i.id))} aria-label={`Ouvrir ${i.title}`}>
+                {thumb ? <Thumb media={thumb} className="ref-thumb" /> : <span className="ref-empty">Aperçu à venir</span>}
+                <span className={"ref-prio p-" + String(i.priority).replace(/\s/g, "-")}>{prioLabel(String(i.priority))}</span>
+                {i.status === "fait" && <span className="ref-done"><Check size={16} /></span>}
+                {picking && <span className={"ref-check" + (on ? " on" : "")}>{on ? <Check size={16} /> : null}</span>}
+              </button>
+              <div className="ref-info">
+                <strong>{String(i.title).replace(/^REF \d+ — /, "")}</strong>
+                <small>{String(i.refCode)} · {String(i.category)}{who_ ? ` · ${who_}` : ""}</small>
+              </div>
+              <div className="ref-quick">
+                <button className={i.status === "fait" ? "on" : ""} onClick={() => setStatusOf([i.id], i.status === "fait" ? "à faire" : "fait")}><Check size={16} /> {i.status === "fait" ? "Fait" : "Fait ?"}</button>
+                <select aria-label="Statut" value={String(i.status)} onChange={(e) => setStatusOf([i.id], e.target.value)}>{REF_STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              </div>
+              {i.status === "fait" && i.doneBy ? <small className="ref-by-line">Validé par {String(i.doneBy)} — {new Date(String(i.doneAt)).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small> : null}
+            </article>
+          );
+        };
   if (!all.length) {
     return (
       <Screen title="Références du couple" backTo="/plus">
@@ -118,32 +146,35 @@ export default function References() {
         </div>
       )}
 
-      <div className="ref-grid">
-        {shown.map((i) => {
-          const thumb = mediaFor(media, i);
-          const on = picked.includes(i.id);
-          const who_ = team.find((m) => m.id === i.assignee)?.title;
+      {(() => {
+        const groups = (stage ? [stage] : stageNames).map((st) => ({ st, list: shown.filter((i) => i.refStage === st) })).filter((g) => g.list.length);
+        return groups.map(({ st, list }) => {
+          const pr = refProgress(list);
+          const closed = collapsed.includes(st);
+          const cats = [...new Set(list.map((i) => String(i.category)))];
           return (
-            <article key={i.id} className={"ref-card st-" + String(i.status).replace(/\s/g, "-") + (on ? " is-on" : "")}>
-              <button className="ref-media" onClick={() => (picking ? setPicked((c) => (c.includes(i.id) ? c.filter((x) => x !== i.id) : [...c, i.id])) : setViewing(i.id))} aria-label={`Ouvrir ${i.title}`}>
-                {thumb ? <Thumb media={thumb} className="ref-thumb" /> : <span className="ref-empty">Aperçu à venir</span>}
-                <span className={"ref-prio p-" + String(i.priority).replace(/\s/g, "-")}>{prioLabel(String(i.priority))}</span>
-                {i.status === "fait" && <span className="ref-done"><Check size={16} /></span>}
-                {picking && <span className={"ref-check" + (on ? " on" : "")}>{on ? <Check size={16} /> : null}</span>}
-              </button>
-              <div className="ref-info">
-                <strong>{String(i.title).replace(/^REF \d+ — /, "")}</strong>
-                <small>{String(i.refCode)} · {String(i.category)}{who_ ? ` · ${who_}` : ""}</small>
+            <section key={st} className="ref-section" data-reorder-section={st}>
+              <div className="section-title ref-section-head">
+                <button className="icon-btn small" aria-label={(closed ? "Déplier " : "Replier ") + st} onClick={() => toggleCollapsed(st)}><ChevronDown size={16} className={closed ? "pose-folded" : ""} /></button>
+                <strong>{st}</strong>
+                <span>{pr.done}/{pr.total}</span>
+                <SectionProgress items={list} media={media} sequence="plans" unit="plans" />
               </div>
-              <div className="ref-quick">
-                <button className={i.status === "fait" ? "on" : ""} onClick={() => setStatusOf([i.id], i.status === "fait" ? "à faire" : "fait")}><Check size={16} /> {i.status === "fait" ? "Fait" : "Fait ?"}</button>
-                <select aria-label="Statut" value={String(i.status)} onChange={(e) => setStatusOf([i.id], e.target.value)}>{REF_STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-              </div>
-              {i.status === "fait" && i.doneBy ? <small className="ref-by-line">Validé par {String(i.doneBy)} — {new Date(String(i.doneAt)).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small> : null}
-            </article>
+              {!closed && cats.map((c) => {
+                const sub = list.filter((i) => i.category === c);
+                return (
+                  <div key={c} className="ref-subsection">
+                    <div className="ref-subhead"><b>{c}</b><small>{refProgress(sub).done}/{refProgress(sub).total}</small></div>
+                    <div className="ref-grid">
+                      {sub.map(renderCard)}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
           );
-        })}
-      </div>
+        });
+      })()}
       {!shown.length && <p className="muted">Aucun plan ne correspond à ces filtres.</p>}
 
       <section className="ref-history">
@@ -154,6 +185,7 @@ export default function References() {
         </ul>
       </section>
 
+      <FloatDock selectMode={picking} onSelect={() => { setPicking(true); setPicked([]); }} onExit={() => { setPicking(false); setPicked([]); }} />
       {current && <RefViewer item={current} media={media} team={team} onClose={() => setViewing("")} setStatusOf={setStatusOf} setField={setField} ids={shown.map((i) => i.id)} onNav={setViewing} clock={clock} />}
     </Screen>
   );

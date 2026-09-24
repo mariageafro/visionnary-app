@@ -27,7 +27,7 @@ export function progressOf(items: Item[], media: MediaEntry[]): Progress {
   let itemTotal = 0;
   let itemDone = 0;
   for (const item of items) {
-    if (item.status === "archivé" || item.mergedInto) continue;
+    if (item.status === "archivé" || item.status === "non nécessaire" || item.mergedInto) continue;
     const angles = seriesMedia(media, item).length;
     let t: number;
     let d: number;
