@@ -122,3 +122,17 @@ export function movePoseSectionTo(project: Project, title: string, destination: 
   const titles = relocate(project, title, destination);
   return titles ? writeOrder(project, titles) : project;
 }
+
+/** Masque ou réaffiche une section : ses poses restent intactes, seule la section disparaît de la liste. */
+export function setPoseSectionHidden(project: Project, title: string, hidden: boolean): Project {
+  const sections = project.poseSections ?? [];
+  const existing = sections.find((section) => section.title === title);
+  return { ...project, poseSections: existing
+    ? sections.map((section) => section.id === existing.id ? { ...section, hidden } : section)
+    : [...sections, { id: crypto.randomUUID(), title, order: poseSectionTitles(project).indexOf(title), hidden }] };
+}
+export const isPoseSectionHidden = (project: Project, title: string): boolean => {
+  const own = (project.poseSections ?? []).find((section) => section.title === title);
+  const parent = parentTitleOf(project, title);
+  return own?.hidden === true || (parent ? isPoseSectionHidden(project, parent) : false);
+};

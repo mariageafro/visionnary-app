@@ -9,7 +9,7 @@ import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, 
 import type { Item, MediaEntry } from "../types";
 import { done, makeItem, poseCategories } from "../model";
 import { operatorGuides } from "../operatorGuide";
-import { addPoseSection, parentTitleOf, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
+import { addPoseSection, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
@@ -39,6 +39,9 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [layout, setLayout] = useState<"grid" | "carousel">("grid");
   const [selectMode, setSelectMode] = useState(false);
   const [cut, setCut] = useState<string[]>([]);
+  const [subFor, setSubFor] = useState("");
+  const [subName, setSubName] = useState("");
+  const [showHiddenSections, setShowHiddenSections] = useState(false);
   const [autoSimilar, setAutoSimilar] = useState(() => { try { return localStorage.getItem("visionnary-auto-similar") === "1"; } catch { return false; } });
   const [similarBusy, setSimilarBusy] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
@@ -67,7 +70,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     filter === "all" ? true : filter === "favorites" ? i.favorite === true : filter === "essentials" ? i.priority === "MUST HAVE" : filter === "todo" ? !done(i) : categoryOf(i) === current,
   );
   // Regroupées par catégorie (comme les chapitres de Plans & scènes) : un titre de section par catégorie présente dans le filtre courant.
-  const sections = filter === "essentials" || filter === "hidden" ? [[filter === "hidden" ? "Masquées" : "À faire absolument", shown] as const] : categories.map((c) => [c, shown.filter((i) => categoryOf(i) === c)] as const).filter(([c, list]) => list.length || filter === "all" && (p.poseSections ?? []).some((section) => section.title === c)).filter(([c]) => { const par = parentTitleOf(p, c); return !par || !(p.poseSections ?? []).find((x) => x.title === par)?.collapsed; });
+  const sections = filter === "essentials" || filter === "hidden" ? [[filter === "hidden" ? "Masquées" : "À faire absolument", shown] as const] : categories.map((c) => [c, shown.filter((i) => categoryOf(i) === c)] as const).filter(([c, list]) => list.length || filter === "all" && (p.poseSections ?? []).some((section) => section.title === c)).filter(([c]) => filter !== "all" || !isPoseSectionHidden(p, c)).filter(([c]) => { const par = parentTitleOf(p, c); return !par || !(p.poseSections ?? []).find((x) => x.title === par)?.collapsed; });
   const order = sections.flatMap(([, list]) => list);
   const operators = operatorsOf(p);
   const doneCount = all.filter(done).length;
@@ -238,6 +241,12 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <input id="pose-new-section" value={newSection} onChange={(event) => setNewSection(event.target.value)} placeholder="Nouvelle section photo…" maxLength={80} />
           <button className="btn small" type="submit" disabled={!newSection.trim()}><Plus size={15} /> Section</button>
         </form>
+        {(() => { const hiddenNames = poseSectionTitles(p).filter((t) => (p.poseSections ?? []).find((x) => x.title === t)?.hidden === true); return hiddenNames.length ? (
+          <div className="hidden-sections">
+            <button className="btn small" aria-expanded={showHiddenSections} onClick={() => setShowHiddenSections(!showHiddenSections)}><EyeOff size={14} /> Sections masquées ({hiddenNames.length})</button>
+            {showHiddenSections && hiddenNames.map((t) => <button key={t} className="btn small" onClick={() => update(setPoseSectionHidden(p, t, false), `Section « ${t} » réaffichée`)}><Eye size={14} /> {t}</button>)}
+          </div>
+        ) : null; })()}
         <details className="pose-guide-editor">
           <summary>Consignes photographe</summary>
           <label className="field">Consignes pour ce mariage<textarea value={photoGuide} onChange={(event) => setPhotoGuide(event.target.value)} /></label>
@@ -309,7 +318,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
             <div className="section-title pose-section-head">
               {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
-              {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="btn small" onClick={() => { const name = window.prompt(`Nom de la sous-section dans « ${section} » (ex. Accessoires mariée)`); if (name?.trim()) update(addPoseSection(p, name, section), `Sous-section « ${name.trim()} » créée dans « ${section} »`); }}><Plus size={14} /> Sous-section</button>}
+              {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="btn small" onClick={() => { setSubFor(subFor === section ? "" : section); setSubName(""); }}><Plus size={14} /> Sous-section</button>}
+              {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small" aria-label={`Masquer ${section}`} title="Masquer cette section (réaffichable)" onClick={() => update(setPoseSectionHidden(p, section, true), `Section « ${section} » masquée`)}><EyeOff size={15} /></button>}
               {cut.length > 0 && section !== "Masquées" && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{parentTitleOf(p, section) && <small className="sub-parent">{parentTitleOf(p, section)} › </small>}{section}</strong>}
@@ -328,6 +338,13 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 </>}
               </div>
             </div>
+            {subFor === section && (
+              <form className="pose-rename sub-form" onSubmit={(event) => { event.preventDefault(); const name = subName.trim(); if (!name) return; const next = addPoseSection(p, name, section); if (next === p) { notify("Ce nom existe déjà ou n'est pas valable"); return; } update(next, `Sous-section « ${name} » créée dans « ${section} »`); setSubFor(""); setSubName(""); }}>
+                <input autoFocus aria-label={`Nom de la sous-section de ${section}`} value={subName} onChange={(event) => setSubName(event.target.value)} placeholder={`Sous-section de « ${section} » (ex. Accessoires mariée)`} maxLength={80} />
+                <button className="btn gold small" type="submit" disabled={!subName.trim()}>Créer</button>
+                <button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setSubFor("")}><X size={15} /></button>
+              </form>
+            )}
             {!(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed && <div className={"pose-wall" + (reorder ? " is-reordering" : "") + (layout === "carousel" ? " is-carousel" : "")}>
               {list.map((pose, n) => {
                 const thumb = mediaFor(media, pose);

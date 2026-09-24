@@ -61,7 +61,7 @@ const RESUME = "visionnary-resume";
 /** Retient l'écran et la position de défilement ; à la réouverture on revient exactement où on s'était arrêté. */
 function useResume() {
   useEffect(() => {
-    let saved: { hash: string; y: number } | null = null;
+    let saved: { hash: string; y: number; section?: string; delta?: number } | null = null;
     try {
       saved = JSON.parse(localStorage.getItem(RESUME) ?? "null");
     } catch {
@@ -71,9 +71,11 @@ function useResume() {
     if (saved && saved.y > 0) {
       let tries = 0;
       const timer = window.setInterval(() => {
-        window.scrollTo(0, saved!.y);
-        document.querySelector(".main")?.scrollTo(0, saved!.y);
-        if (++tries > 12 || Math.abs(window.scrollY - saved!.y) < 4) window.clearInterval(timer);
+        const el = saved!.section ? [...document.querySelectorAll<HTMLElement>("[data-reorder-section]")].find((x) => x.dataset.reorderSection === saved!.section) : undefined;
+        const y = el ? Math.max(0, el.getBoundingClientRect().top + window.scrollY + (saved!.delta ?? 0)) : saved!.y;
+        window.scrollTo(0, y);
+        document.querySelector(".main")?.scrollTo(0, y);
+        if (++tries > 16 || (el && Math.abs(window.scrollY - y) < 4)) window.clearInterval(timer);
       }, 250);
     }
     let pending = 0;
@@ -81,7 +83,9 @@ function useResume() {
       window.clearTimeout(pending);
       pending = window.setTimeout(() => {
         try {
-          localStorage.setItem(RESUME, JSON.stringify({ hash: location.hash, y: Math.round(window.scrollY || (document.querySelector(".main")?.scrollTop ?? 0)) }));
+          const secs = [...document.querySelectorAll<HTMLElement>("[data-reorder-section]")].filter((x) => x.getBoundingClientRect().top <= 120);
+          const top = secs[secs.length - 1];
+          localStorage.setItem(RESUME, JSON.stringify({ hash: location.hash, y: Math.round(window.scrollY || (document.querySelector(".main")?.scrollTop ?? 0)), ...(top ? { section: top.dataset.reorderSection, delta: Math.round(-top.getBoundingClientRect().top) } : {}) }));
         } catch {
           /* position non mémorisée */
         }
