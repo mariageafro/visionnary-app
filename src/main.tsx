@@ -12,6 +12,7 @@ import "@fontsource/manrope/latin-700.css";
 import "@fontsource/manrope/latin-800.css";
 import "@fontsource/caveat/latin-600.css";
 import "./theme.css";
+import "./screens/legacy.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />

@@ -1,0 +1,20 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Diagnostic tablette</title>
+<style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;background:#111;color:#eee;padding:16px;margin:0}h1{font-size:22px}li{margin:6px 0}.ok{color:#7ddc9a}.ko{color:#ff9a8a;font-weight:700}code{color:#d4af37;word-break:break-all}img{max-width:100%;border:2px solid #444;margin:8px 0}</style></head><body>
+<h1>Diagnostic VISIONNARY</h1><p>Faites une <b>capture d’écran</b> de cette page entière et envoyez-la.</p>
+<ul id="r"></ul><p id="ua"><code></code></p><div id="imgs"></div>
+<script>
+(function(){var r=document.getElementById('r');function add(n,ok,d){var li=document.createElement('li');li.innerHTML=(ok?'<span class="ok">✔</span> ':'<span class="ko">✘</span> ')+n+(d?' <code>'+d+'</code>':'');r.appendChild(li)}
+document.querySelector('#ua code').textContent=navigator.userAgent;
+try{add('CSS aspect-ratio',window.CSS&&CSS.supports&&CSS.supports('aspect-ratio','1 / 1'))}catch(e){add('CSS aspect-ratio',false,e.message)}
+try{add('CSS inset',CSS.supports('inset','0'))}catch(e){add('CSS inset',false)}
+try{add('createImageBitmap',typeof createImageBitmap==='function')}catch(e){add('createImageBitmap',false)}
+try{add('crypto.randomUUID',!!(window.crypto&&crypto.randomUUID))}catch(e){add('crypto.randomUUID',false)}
+try{add('Array.at',!![].at)}catch(e){add('Array.at',false)}
+try{localStorage.setItem('t','1');add('localStorage',localStorage.getItem('t')==='1')}catch(e){add('localStorage',false,e.message)}
+try{add('Service worker',!!navigator.serviceWorker)}catch(e){add('Service worker',false)}
+try{var q=indexedDB.open('diag-test');q.onsuccess=function(){add('IndexedDB ouverte',true);var db=q.result;try{var tx=db.transaction?null:null}catch(e){}
+var st=indexedDB.open('diag-blob',1);st.onupgradeneeded=function(){st.result.createObjectStore('b')};st.onsuccess=function(){try{var d=st.result;var tx=d.transaction('b','readwrite');tx.objectStore('b').put(new Blob(['abc'],{type:'text/plain'}),'k');tx.oncomplete=function(){add('IndexedDB : enregistre un fichier',true);d.close()};tx.onerror=function(){add('IndexedDB : enregistre un fichier',false,String(tx.error))}}catch(e){add('IndexedDB : enregistre un fichier',false,e.message)}};st.onerror=function(){add('IndexedDB : enregistre un fichier',false,String(st.error))};};q.onerror=function(){add('IndexedDB ouverte',false,String(q.error))}}catch(e){add('IndexedDB',false,e.message)}
+var base=location.pathname.replace(/[^\/]*$/,'')+'seed/andy-maeva-7k2q/p/';var files=['P0001.jpg','P0002.jpg'];files.forEach(function(f){var im=new Image();im.onload=function(){add('Photo '+f+' chargée',true,im.naturalWidth+'×'+im.naturalHeight)};im.onerror=function(){add('Photo '+f+' chargée',false)};im.src=base+f;document.getElementById('imgs').appendChild(im)});
+try{fetch(base+'../plan.json').then(function(x){add('Téléchargement du plan (fetch)',x.ok,x.status)}).catch(function(e){add('Téléchargement du plan (fetch)',false,String(e))})}catch(e){add('fetch',false,e.message)}
+})();
+</script></body></html>
