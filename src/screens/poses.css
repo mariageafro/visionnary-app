@@ -171,7 +171,7 @@
   border-color: var(--gold);
 }
 .pose-essential{position:absolute;left:8px;top:8px;min-height:32px;padding:5px 9px;border-radius:999px;background:#000a;border:1px solid #ffffff7a;color:#fff;font-size:11px;font-weight:800}
-.pose-essential[aria-pressed="true"]{background:#9d3434;border-color:#e28b80}
+.pose-essential[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#111}
 .pose-tile.is-done .pose-thumb img {
   opacity: 0.5;
   filter: saturate(0.4);

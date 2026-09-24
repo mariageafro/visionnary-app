@@ -146,6 +146,7 @@ export default function Inspirations() {
               onView={() => setViewing(i)}
               onEdit={() => setEditing(i)}
             />
+            {typeof i.url === "string" && /^https:\/\/www\.instagram\.com\//.test(i.url) && <a className="btn small" href={i.url} target="_blank" rel="noreferrer">Ouvrir dans Instagram</a>}
             {mediaFor(media, i)?.type.startsWith("video/") && <button className="btn small" type="button" onClick={() => setSegmenting(i)}><Scissors size={15} /> Découper en segments</button>}
             </div>
           ))}

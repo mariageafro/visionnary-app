@@ -217,6 +217,8 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
           <span className="muted">Glissez-en une sur le centre d'une autre pour l'ajouter comme angle, ou regroupez.</span>
           <button className="btn gold" disabled={picked.length < 2} onClick={mergePicked}><Layers size={16} /> Regrouper en une série</button>
+          <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
+          <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
         </div>
       )}
