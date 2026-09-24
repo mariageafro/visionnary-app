@@ -8,13 +8,14 @@ import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
 import type { Item, MediaEntry } from "../types";
-import { done, makeItem, poseCategories } from "../model";
+import { done, makeItem, poseCategories, uid } from "../model";
+import { listMedia, putMedia } from "../storage";
 import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, orderPoseSectionsByDay, isPoseSectionHidden, parentTitleOf, setPoseSectionHidden, movePoseSection, movePoseSectionTo, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderBlock, reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
 import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia, viewStyle } from "../merge";
-import { Empty, MediaViewer, Screen, Thumb, navigate, useMedia } from "../ui";
+import { Empty, MediaViewer, Screen, Thumb, mediaChanged, navigate, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
 import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
 import "./poses.css";
@@ -95,15 +96,6 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     update(removePoseSection(p, section), `Section photo « ${section} » supprimée ; poses conservées`);
     if (current === section) setFilter("all");
   };
-  const duplicateSection = (section: string) => {
-    let title = `${section} (copie)`;
-    let number = 2;
-    while (poseSectionTitles(p).includes(title)) title = `${section} (copie ${number++})`;
-    const configured = addPoseSection(p, title);
-    const copies = itemsOf(p, "poses").filter((pose) => categoryOf(pose) === section).map((pose, index) => ({ ...pose, id: crypto.randomUUID(), title: `${pose.title} (copie)`, category: title, sourceMediaId: pose.sourceMediaId || mediaFor(media, pose)?.id, status: "prévu", order: nextOrder(p, "poses") + index }));
-    update({ ...configured, items: [...configured.items, ...copies] }, `Section photo « ${section} » dupliquée avec ${copies.length} pose(s)`);
-    setFilter(`cat:${title}`);
-  };
   const dropOnSection = (event: DragEvent<HTMLElement>, section: string) => {
     event.preventDefault();
     event.stopPropagation();
@@ -153,6 +145,32 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     update({ ...p, items: p.items.map((i) => { const n = ids.indexOf(i.id); return n < 0 ? i : { ...i, order: top + 1 + n, ...(section === "À faire absolument" ? { priority: "MUST HAVE" } : { category: section === "Sans catégorie" ? undefined : section }) }; }) }, `${ids.length} pose${ids.length > 1 ? "s" : ""} collée${ids.length > 1 ? "s" : ""} dans « ${section} »`);
     setCut([]);
   };
+  /** Duplique une section (et ses sous-sections) avec ses poses et leurs fichiers ; l'avancement repart à zéro. */
+  async function duplicateSection(title: string) {
+    const parent = parentTitleOf(p, title);
+    const titles = [title, ...(parent ? [] : poseSectionTitles(p).filter((t) => parentTitleOf(p, t) === title))];
+    let next = p;
+    const nameFor = new Map<string, string>();
+    for (const t of titles) {
+      let name = `${t} (copie)`;
+      for (let n = 2; poseSectionTitles(next).includes(name); n++) name = `${t} (copie ${n})`;
+      nameFor.set(t, name);
+      next = addPoseSection(next, name, parent ?? (t === title ? undefined : nameFor.get(title)));
+    }
+    const source = p.items.filter((i) => i.module === "poses" && titles.includes(String(i.category || "Sans catégorie")));
+    const idMap = new Map(source.map((i) => [i.id, uid()]));
+    const allMedia = await listMedia(p.id);
+    const mediaMap = new Map<string, string>();
+    for (const m of allMedia.filter((x) => idMap.has(x.itemId))) {
+      const id = uid();
+      mediaMap.set(m.id, id);
+      await putMedia({ ...m, id, itemId: idMap.get(m.itemId)! });
+    }
+    const remap = (list: unknown, map: Map<string, string>) => String(list ?? "").split(",").filter(Boolean).map((x) => map.get(x) ?? x).join(",");
+    const copies = source.map((i) => ({ ...i, id: idMap.get(i.id)!, category: nameFor.get(String(i.category || "Sans catégorie")), packKey: "", status: i.status === "archivé" ? "archivé" : "prévu", includes: remap(i.includes, idMap), mergedInto: i.mergedInto ? idMap.get(String(i.mergedInto)) ?? "" : "", anglesDone: "", coverId: i.coverId ? mediaMap.get(String(i.coverId)) ?? i.coverId : i.coverId, angleOrder: remap(i.angleOrder, mediaMap), angleHidden: remap(i.angleHidden, mediaMap) }));
+    mediaChanged();
+    update({ ...next, items: [...next.items, ...copies] }, `Section « ${title} » dupliquée${titles.length > 1 ? " avec ses sous-sections" : ""}`);
+  }
   const dropPoseOnSection = (draggedId: string, section: string) => {
     if (!p.items.some((i) => i.id === draggedId)) {
       if (draggedId !== section && section !== "À faire absolument" && section !== "Masquées") update(movePoseSectionTo(p, draggedId, section), "Sections photo réordonnées");
@@ -321,6 +339,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
               {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
               {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className={"icon-btn small" + (subFor === section ? " on" : "")} aria-label={`Ajouter une sous-section à ${section}`} title="Ajouter une sous-section" onClick={() => { setSubFor(subFor === section ? "" : section); setSubName(""); }}><FolderPlus size={15} /></button>}
+              {section !== "À faire absolument" && section !== "Masquées" && section !== "Sans catégorie" && filter === "all" && <button className="icon-btn small sec-tool" aria-label={`Dupliquer ${section}`} title={parentTitleOf(p, section) ? "Dupliquer cette sous-section" : "Dupliquer cette section et ses sous-sections"} onClick={() => void duplicateSection(section)}><Copy size={15} /></button>}
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small sec-tool" aria-label={`Regrouper les photos similaires de ${section}`} title="Regrouper automatiquement les photos similaires de cette section" disabled={similarBusy} onClick={() => void groupSimilarPhotos(false, section)}><Layers size={15} /></button>}
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && list.some((i) => String(i.includes ?? "")) && <button className="icon-btn small sec-tool" aria-label={`Dégrouper toute la section ${section}`} title="Remettre chaque photo à part dans cette section" onClick={() => { if (window.confirm(`Dégrouper toutes les séries de « ${section} » ? Chaque photo redevient une pose à part.`)) update({ ...p, items: dissolveSeries(p.items, list.map((i) => i.id)) }, `Séries de « ${section} » dégroupées`); }}><Unlink size={15} /></button>}
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small" aria-label={`Masquer ${section}`} title="Masquer cette section (réaffichable)" onClick={() => update(setPoseSectionHidden(p, section, true), `Section « ${section} » masquée`)}><EyeOff size={15} /></button>}
@@ -334,7 +353,6 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                 <PickFiles className="btn small" label="Photo / vidéo" onFiles={(files) => queueImport(files, section === "À faire absolument" ? "" : section, section === "À faire absolument")} />
                 {section !== "À faire absolument" && <>
                   <button className="icon-btn small" aria-label={`Renommer ${section}`} onClick={() => { setRenaming(section); setRenameDraft(section); }}><Pencil size={15} /></button>
-                  <button className="icon-btn small" aria-label={`Dupliquer ${section}`} onClick={() => duplicateSection(section)}><Copy size={15} /></button>
                   <button className="icon-btn small" aria-label={`Monter ${section}`} disabled={categories.indexOf(section) <= 0} onClick={() => update(movePoseSection(p, section, -1), "Sections photo réordonnées")}>↑</button>
                   <button className="icon-btn small" aria-label={`${section} en première place`} title="Tout en haut" disabled={categories.indexOf(section) <= 0} onClick={() => update(movePoseSectionTo(p, section, "start"), "Section placée en premier")}>⤒</button>
                   <button className="icon-btn small" aria-label={`${section} en dernière place`} title="Tout en bas" disabled={categories.indexOf(section) >= categories.length - 1} onClick={() => update(movePoseSectionTo(p, section, "end"), "Section placée en dernier")}>⤓</button>
