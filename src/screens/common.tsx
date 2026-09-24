@@ -270,7 +270,7 @@ export function MediaCard({
         {onFavorite && <span className="insp-favorite"><Star size={14} fill={item.favorite === true ? "currentColor" : "none"} /></span>}
         <span className="insp-badges">
           {isShot && <ShotStatus item={item} />}
-          {item.priority === "MUST HAVE" && !(isShot && done(item)) && <span className="chip red">MUST</span>}
+          {item.priority === "MUST HAVE" && !(isShot && done(item)) && <span className="chip must-chip">MUST</span>}
           {isShot && item.bRoll === "oui" && <span className="chip dark">B-roll</span>}
           {isShot && item.teaser === "oui" && <span className="chip dark">Teaser</span>}
           {isShot && item.sde === "indispensable" && <span className="chip gold">SDE · indispensable</span>}
@@ -380,7 +380,7 @@ export function QuickView({
               <span>Aucune référence pour l’instant</span>
             </div>
           )}
-          {item.priority === "MUST HAVE" && <span className="chip red quickview-must">MUST HAVE</span>}
+          {item.priority === "MUST HAVE" && <span className="chip must-chip quickview-must">MUST HAVE</span>}
         </div>
         {isVideo && (
           <button className="btn small" onClick={() => setFull(true)}>
