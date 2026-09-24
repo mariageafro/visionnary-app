@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { useStore } from "../store";
 import { importMedia } from "../media";
+import { libraryOf, newLibrary } from "../library";
 import { isRefManifest, planRefImport, type RefManifest, type RefPlan } from "../refs";
 
 /**
@@ -9,7 +10,7 @@ import { isRefManifest, planRefImport, type RefManifest, type RefPlan } from "..
  * clips/ d'aperçus légers. Les vidéos d'origine ne sont jamais copiées. Additif, idempotent, annulable.
  */
 export default function RefImport() {
-  const { project: p, update, notify } = useStore();
+  const { w, project: p, change, update, notify } = useStore();
   const [manifest, setManifest] = useState<RefManifest | null>(null);
   const [files, setFiles] = useState<Map<string, File>>(new Map());
   const [plan, setPlan] = useState<RefPlan | null>(null);
@@ -29,7 +30,8 @@ export default function RefImport() {
       const byName = new Map(all.filter((f) => /\.(mp4|mov|m4v|webm)$/i.test(f.name)).map((f) => [f.name, f]));
       setManifest(parsed);
       setFiles(byName);
-      setPlan(planRefImport(p, parsed, new Set(byName.keys())));
+      const holder = parsed.type === "inspiration_library" ? libraryOf(w) ?? newLibrary() : p;
+      setPlan(planRefImport(holder, parsed, new Set(byName.keys())));
     } catch {
       setMessage("Ce manifest.json n'est pas un manifeste de références valide.");
     }
@@ -37,17 +39,23 @@ export default function RefImport() {
 
   async function run() {
     if (!plan || !p || !manifest) return;
+    const toLibrary = manifest.type === "inspiration_library";
+    const holder = toLibrary ? libraryOf(w) ?? newLibrary() : p;
     const total = plan.items.length;
     let done = 0;
     setProgress({ done, total });
     const covers = new Map<string, string>();
     try {
       for (const { item, file } of plan.items) {
-        const media = await importMedia(files.get(file)!, p.id, item.id);
+        const media = await importMedia(files.get(file)!, holder.id, item.id);
         covers.set(item.id, media.id);
         setProgress({ done: ++done, total });
       }
-      update({ ...p, items: [...p.items, ...plan.items.map(({ item }) => ({ ...item, coverId: covers.get(item.id) ?? "" }))] }, `${total} références importées`);
+      const added = plan.items.map(({ item }) => ({ ...item, coverId: covers.get(item.id) ?? "" }));
+      if (toLibrary) {
+        const withItems = { ...holder, items: [...holder.items, ...added], updatedAt: new Date().toISOString() };
+        change({ ...w, projects: libraryOf(w) ? w.projects.map((x) => (x.id === holder.id ? withItems : x)) : [...w.projects, withItems] }, `${total} inspirations ajoutées à la bibliothèque`);
+      } else update({ ...p, items: [...p.items, ...added] }, `${total} références importées`);
       notify(`${total} références ajoutées`);
       setMessage(`Terminé : ${total} plans de référence ajoutés.`);
       setPlan(null);

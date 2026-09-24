@@ -52,6 +52,7 @@ import Sde from "./screens/Sde";
 import Teaser from "./screens/Teaser";
 import Library from "./screens/Library";
 import References from "./screens/References";
+import InspirationLibrary from "./screens/InspirationLibrary";
 import PresetsScreen from "./screens/Presets";
 import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
@@ -173,6 +174,7 @@ const side = [
   ["/m/references", "Références du couple", Clapperboard],
   ["/m/poses", "Galerie photographe", Camera],
   ["/bibliotheque", "Bibliothèque de poses", Images],
+  ["/bibliotheque/inspiration", "Bibliothèque d’inspiration", Clapperboard],
   ["/checklist", "Checklist", ListChecks],
   ["/rappels", "Rappels", Bell],
   ["/equipe", "Équipe", Users],
@@ -219,7 +221,7 @@ function Shell() {
   else
     switch (section) {
       case "bibliotheque":
-        screen = <Library />;
+        screen = arg === "inspiration" ? <InspirationLibrary /> : <Library />;
         break;
       case "tournages":
         screen = <Shoots />;
