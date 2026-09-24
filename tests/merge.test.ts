@@ -43,3 +43,14 @@ describe("séries d'angles", () => {
     expect(item.status).toBe("prévu");
   });
 });
+
+import { dissolveSeries, mergeIntoSeries } from "../src/merge";
+import type { Item } from "../src/types";
+describe("dégrouper", () => {
+  it("fait ressortir les éléments regroupés", () => {
+    const mk = (id: string) => ({ id, module: "poses", title: id, order: 0, status: "prévu" }) as unknown as Item;
+    const merged = mergeIntoSeries([mk("a"), mk("b"), mk("c")], "a", ["b", "c"])!;
+    const out = dissolveSeries(merged, ["a"]);
+    expect(out.every((i) => !i.mergedInto && i.status === "prévu" && !i.includes)).toBe(true);
+  });
+});

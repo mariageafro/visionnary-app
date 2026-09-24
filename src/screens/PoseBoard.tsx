@@ -2,6 +2,7 @@ import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery, { viewStyle } from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
+import { Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
@@ -11,7 +12,7 @@ import { operatorGuides } from "../operatorGuide";
 import { addPoseSection, movePoseSection, poseSectionTitles, removePoseSection, renamePoseSection, setPoseSectionCollapsed } from "../poseSections";
 import { useProject } from "../store";
 import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
-import { doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
+import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
 import { Empty, MediaViewer, Screen, Thumb, navigate, useMedia } from "../ui";
 import { clockShort, ItemEditor, itemsOf, mediaFor, nextOrder, operatorsOf, shortFocal, titleOf } from "./common";
 import { accepted, DropVeil, ImportProgress, ImportSheet, PickFiles, useFileDrop, useImporter } from "./MediaDrop";
@@ -272,6 +273,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className="btn gold" disabled={picked.length < 2} onClick={mergePicked}><Layers size={16} /> Regrouper en une série</button>
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); }}><Unlink size={16} /> Dégrouper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
@@ -332,6 +334,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
                       <Star size={15} fill={pose.favorite === true ? "currentColor" : "none"} />
                     </button>
                     <button type="button" className="pose-essential" aria-pressed={pose.priority === "MUST HAVE"} aria-label={pose.priority === "MUST HAVE" ? "Retirer des essentiels photo" : "Marquer essentiel photo"} onClick={() => patchItem(pose.id, { priority: pose.priority === "MUST HAVE" ? "IMPORTANT" : "MUST HAVE" })}>Essentiel</button>
+                    {series.length > 1 && <button type="button" className="pose-ungroup" aria-label="Dégrouper : faire ressortir les photos" title="Dégrouper : faire ressortir les photos" onClick={() => update({ ...p, items: dissolveSeries(p.items, [pose.id]) }, "Série dégroupée : les photos ressortent")}><Unlink size={13} /></button>}
                     {series.length > 1 && <span className={"pose-angles" + (taken === series.length ? " is-complete" : "")} title={`${series.length} angles · ${taken} pris`}><Layers size={13} /> {taken ? `${taken}/${series.length}` : series.length}</span>}
                     {selectMode && <button type="button" className="pose-select" aria-pressed={picked.includes(pose.id)} aria-label={`Cocher ${pose.title}`} onClick={() => setPicked((current) => (current.includes(pose.id) ? current.filter((x) => x !== pose.id) : [...current, pose.id]))}>{picked.includes(pose.id) ? <Check size={18} /> : null}</button>}
                     <span className="pose-drag" role="button" tabIndex={0} onPointerDown={(event) => dragPose(event, pose.id)} title={`Glisser « ${pose.title} » vers une autre place ou une autre section`} aria-label={`Déplacer ${pose.title} : glisser vers une autre photo ou une autre section`}><GripVertical size={16} /></span>

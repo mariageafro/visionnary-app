@@ -257,3 +257,4 @@
 .dock-btn.wide,.dock-btn.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 .sim-panel{display:grid;gap:10px;margin:0 0 12px;padding:14px}.sim-panel .choices{display:flex;gap:8px}
+.pose-ungroup{position:absolute;left:8px;top:78px;z-index:6;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#000b;border:1px solid #ffffff77;color:#fff}

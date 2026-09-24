@@ -67,3 +67,15 @@ export function toggleAngle(item: Item, mediaId: string, total: number): Item {
   const complete = total > 0 && done.size >= total;
   return { ...item, anglesDone: [...done].join(","), ...(complete ? { status: "terminé" } : item.status === "terminé" ? { status: "prévu" } : {}) };
 }
+
+/** Défait des séries : chaque élément regroupé ressort et redevient une pose ou un plan à part entière. */
+export function dissolveSeries(items: Item[], targetIds: string[]): Item[] {
+  const targets = new Set(targetIds);
+  const released = new Set(items.filter((i) => targets.has(i.id)).flatMap((i) => list(i.includes)));
+  if (!released.size) return items;
+  return items.map((item) => {
+    if (targets.has(item.id)) return { ...item, includes: "", anglesDone: "", angleOrder: "" };
+    if (released.has(item.id) && targets.has(String(item.mergedInto))) return { ...item, mergedInto: "", status: "prévu" };
+    return item;
+  });
+}

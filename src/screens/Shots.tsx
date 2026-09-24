@@ -1,4 +1,5 @@
 import FloatDock from "./FloatDock";
+import { Unlink } from "lucide-react";
 import { useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
@@ -9,7 +10,7 @@ import { withOrder } from "../features";
 import { linkShotsToStages, professionalShotList, shotListCount } from "../shotlist";
 import { useProject } from "../store";
 import { reorderOnDrop, usePointerReorder, type DropZone } from "../reorder";
-import { doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
+import { dissolveSeries, doneAngles, mergeIntoSeries, seriesMedia } from "../merge";
 import { Empty, Screen, Sheet, Tabs, useMedia } from "../ui";
 import { ItemEditor, itemsOf, mediaFor, MediaCard, nextOrder, operatorsOf } from "./common";
 import { matchesShotSearch } from "../shotSearch";
@@ -344,6 +345,7 @@ export default function Shots() {
           <button className="btn gold" disabled={picked.length < 2} onClick={() => dropShotOnShot(picked[0], picked[0], "merge", picked.slice(1))}><Layers size={16} /> Regrouper en une série</button>
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); }}><Trash2 size={16} /> Supprimer</button>
+          <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); }}><Unlink size={16} /> Dégrouper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); }}>Terminer</button>
