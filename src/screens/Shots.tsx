@@ -1,6 +1,6 @@
 import { groupSimilar, mediaHash } from "../similar";
 import FloatDock from "./FloatDock";
-import { Unlink } from "lucide-react";
+import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 import { EyeOff, Camera, Check, ChevronDown, ChevronRight, Clapperboard, Copy, Film, GripVertical, Layers, ListPlus, Pencil, Plane, Plus, Search, Sparkles, Trash2, Video, RotateCcw, SlidersHorizontal, Play, Pause } from "lucide-react";
 import type { Item } from "../types";
@@ -49,6 +49,7 @@ export default function Shots() {
   const [showHiddenSections, setShowHiddenSections] = useState(false);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
+  const [cut, setCut] = useState<string[]>([]);
   const [simOpen, setSimOpen] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
   const [simLevel, setSimLevel] = useState(() => { try { return Number(localStorage.getItem("visionnary-sim-level")) || 14; } catch { return 14; } });
@@ -179,6 +180,13 @@ export default function Shots() {
     const result = reorderOnDrop(list, draggedId, targetId, dragged, zone);
     if (!result) return;
     update({ ...p, items: p.items.map((item) => (result.orders.has(item.id) ? { ...item, order: result.orders.get(item.id)!, ...(item.id === draggedId && result.crossed ? { section: sectionOf(target) } : {}) } : item)) }, result.crossed ? `Plan déplacé vers « ${sectionOf(target)} »` : "Ordre des plans modifié");
+  };
+  const pasteInto = (section: string) => {
+    if (!cut.length) return;
+    const top = Math.max(-1, ...all.map((i) => i.order));
+    const ids = order.filter((i) => cut.includes(i.id)).map((i) => i.id);
+    update({ ...p, items: p.items.map((i) => { const n = ids.indexOf(i.id); return n < 0 ? i : { ...i, order: top + 1 + n, section }; }) }, `${ids.length} plan${ids.length > 1 ? "s" : ""} collé${ids.length > 1 ? "s" : ""} dans « ${section} »`);
+    setCut([]);
   };
   const dropOnSectionPointer = (draggedId: string, section: string) => {
     const shot = all.find((item) => item.id === draggedId);
@@ -391,6 +399,7 @@ export default function Shots() {
           <button className="btn gold full" disabled={simBusy} onClick={() => void groupSimilarShots()}>{simBusy ? "Analyse en cours…" : "Analyser et regrouper"}</button>
         </div>
       )}
+      {cut.length > 0 && <div className="select-bar cut-bar" role="status"><strong>{cut.length} coupé{cut.length > 1 ? "s" : ""}</strong><span className="muted">Allez dans une section (bouton « Aller à une section ») puis « Coller ici ».</span><button className="btn small" onClick={() => setCut([])}>Annuler</button></div>}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} plan{picked.length > 1 ? "s" : ""} coché{picked.length > 1 ? "s" : ""}</strong>
@@ -399,6 +408,7 @@ export default function Shots() {
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); setSelectMode(false); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); setSelectMode(false); }}><Trash2 size={16} /> Supprimer</button>
           <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); setSelectMode(false); }}><Unlink size={16} /> Dégrouper</button>
+          <button className="btn small" disabled={!picked.length} onClick={() => { setCut(picked); setPicked([]); setSelectMode(false); notify(`${picked.length} coupé(s) : ouvrez une section et cliquez « Coller ici »`); }}><Scissors size={16} /> Couper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); setSelectMode(false); }}>Terminer</button>
@@ -428,6 +438,7 @@ export default function Shots() {
                 <span className="shot-section-grip" role="button" tabIndex={0} title={"Glisser pour réordonner « " + section + " »"} onPointerDown={(event) => dragShot(event, section)}><GripVertical size={16} /></span>
                 <button className="icon-btn small" aria-label={`${sectionConfig?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => toggleCollapsed(section)}>{sectionConfig?.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button>
                 <span>{section}</span>
+                {cut.length > 0 && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
                 {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
                 <span>
                   {list.filter(done).length}/{list.length}

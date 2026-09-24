@@ -2,7 +2,7 @@ import QuickStatus from "./QuickStatus";
 import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
-import { Unlink } from "lucide-react";
+import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
@@ -38,6 +38,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
   const [reorder, setReorder] = useState(false);
   const [layout, setLayout] = useState<"grid" | "carousel">("grid");
   const [selectMode, setSelectMode] = useState(false);
+  const [cut, setCut] = useState<string[]>([]);
   const [autoSimilar, setAutoSimilar] = useState(() => { try { return localStorage.getItem("visionnary-auto-similar") === "1"; } catch { return false; } });
   const [similarBusy, setSimilarBusy] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
@@ -139,6 +140,14 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
     const result = reorderOnDrop(list, draggedId, targetId, dragged, zone);
     if (!result) return;
     update({ ...p, items: p.items.map((i) => (result.orders.has(i.id) ? { ...i, order: result.orders.get(i.id)!, ...(i.id === draggedId && result.crossed && !["À faire absolument", "Masquées"].includes(String(target.category ?? "")) ? { category: target.category } : {}) } : i)) }, result.crossed ? `Pose déplacée vers « ${categoryOf(target)} »` : "Ordre des poses modifié");
+  };
+  /** Colle les éléments coupés à la fin d'une section. */
+  const pasteInto = (section: string) => {
+    if (!cut.length || section === "Masquées") return;
+    const top = Math.max(-1, ...p.items.filter((i) => i.module === "poses").map((i) => i.order));
+    const ids = order.filter((i) => cut.includes(i.id)).map((i) => i.id);
+    update({ ...p, items: p.items.map((i) => { const n = ids.indexOf(i.id); return n < 0 ? i : { ...i, order: top + 1 + n, ...(section === "À faire absolument" ? { priority: "MUST HAVE" } : { category: section === "Sans catégorie" ? undefined : section }) }; }) }, `${ids.length} pose${ids.length > 1 ? "s" : ""} collée${ids.length > 1 ? "s" : ""} dans « ${section} »`);
+    setCut([]);
   };
   const dropPoseOnSection = (draggedId: string, section: string) => {
     if (!p.items.some((i) => i.id === draggedId)) {
@@ -278,6 +287,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className="btn gold full" disabled={similarBusy} onClick={() => void groupSimilarPhotos(false)}>{similarBusy ? "Analyse en cours…" : "Analyser et regrouper"}</button>
         </div>
       )}
+      {cut.length > 0 && <div className="select-bar cut-bar" role="status"><strong>{cut.length} coupée{cut.length > 1 ? "s" : ""}</strong><span className="muted">Allez dans une section (bouton « Aller à une section ») puis « Coller ici ».</span><button className="btn small" onClick={() => setCut([])}>Annuler</button></div>}
       {selectMode && (
         <div className="select-bar" role="status">
           <strong>{picked.length} pose{picked.length > 1 ? "s" : ""} cochée{picked.length > 1 ? "s" : ""}</strong>
@@ -286,6 +296,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
           <button className="btn small" onClick={() => { update({ ...p, items: p.items.map((i) => (picked.includes(i.id) ? { ...i, status: i.status === "archivé" ? "prévu" : "archivé" } : i)) }, "Sélection masquée ou réaffichée"); setPicked([]); setSelectMode(false); }}><EyeOff size={16} /> Masquer / réafficher</button>
           <button className="btn small" onClick={() => { if (!window.confirm(`Supprimer ${picked.length} élément(s) et leurs photos/vidéos regroupées ?`)) return; const gone = new Set(picked); update({ ...p, items: p.items.filter((i) => !gone.has(i.id)) }, "Sélection supprimée"); setPicked([]); setSelectMode(false); }}><Trash2 size={16} /> Supprimer</button>
           <button className="btn small" onClick={() => { const n = p.items.filter((i) => picked.includes(i.id) && String(i.includes ?? "")).length; if (!n) return notify("Aucune série dans la sélection."); update({ ...p, items: dissolveSeries(p.items, picked) }, "Série(s) dégroupée(s) : les photos ressortent"); setPicked([]); setSelectMode(false); }}><Unlink size={16} /> Dégrouper</button>
+          <button className="btn small" disabled={!picked.length} onClick={() => { setCut(picked); setPicked([]); setSelectMode(false); notify(`${picked.length} coupée(s) : ouvrez une section et cliquez « Coller ici »`); }}><Scissors size={16} /> Couper</button>
           <button className="btn small" onClick={() => setPicked(order.map((i) => i.id))}>Tout sélectionner</button>
           <button className="btn small" onClick={() => setPicked([])}>Tout décocher</button>
           <button className="btn small" onClick={() => { setSelectMode(false); setPicked([]); setSelectMode(false); }}>Terminer</button>
@@ -298,6 +309,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
             <div className="section-title pose-section-head">
               {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
+              {cut.length > 0 && section !== "Masquées" && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
               {renaming === section ? <form className="pose-rename" onSubmit={(event) => { event.preventDefault(); saveSectionTitle(section); }}><input autoFocus aria-label={`Nouveau titre de ${section}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={80} /><button className="btn small" type="submit">Enregistrer</button><button className="icon-btn small" type="button" aria-label="Annuler" onClick={() => setRenaming("")}><X size={15} /></button></form> : <strong>{section}</strong>}
               <span>{list.filter(done).length}/{list.length}</span>
