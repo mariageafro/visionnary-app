@@ -3,7 +3,7 @@ import "./missions.css";
 import ReferenceGallery from "./ReferenceGallery";
 import FloatDock from "./FloatDock";
 import SectionProgress from "./SectionProgress";
-import { ClipboardPaste, Scissors, Unlink } from "lucide-react";
+import { FolderPlus, ClipboardPaste, Scissors, Unlink } from "lucide-react";
 import { groupSimilar, imageHash } from "../similar";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDownUp, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, GalleryHorizontal, GripVertical, Heart, Images, Layers, LayoutGrid, Pencil, Play, Plus, Star, Trash2, X } from "lucide-react";
@@ -319,7 +319,7 @@ export default function PoseBoard({ stageId, embedded = false }: { stageId?: str
             <div className="section-title pose-section-head">
               {section !== "À faire absolument" && section !== "Masquées" && <span className="shot-section-grip pose-section-grip" role="button" tabIndex={0} title={`Glisser « ${section} » à n'importe quelle place`} onPointerDown={(event) => dragPose(event, section)}><GripVertical size={17} /></span>}
               {section !== "À faire absolument" && <button className="icon-btn small" aria-label={`${(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "Déplier" : "Replier"} ${section}`} onClick={() => update(setPoseSectionCollapsed(p, section, !(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed))}><ChevronDown size={16} className={(p.poseSections ?? []).find((entry) => entry.title === section)?.collapsed ? "pose-folded" : ""} /></button>}
-              {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="btn small" onClick={() => { setSubFor(subFor === section ? "" : section); setSubName(""); }}><Plus size={14} /> Sous-section</button>}
+              {!parentTitleOf(p, section) && section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className={"icon-btn small" + (subFor === section ? " on" : "")} aria-label={`Ajouter une sous-section à ${section}`} title="Ajouter une sous-section" onClick={() => { setSubFor(subFor === section ? "" : section); setSubName(""); }}><FolderPlus size={15} /></button>}
               {section !== "À faire absolument" && section !== "Masquées" && filter === "all" && <button className="icon-btn small" aria-label={`Masquer ${section}`} title="Masquer cette section (réaffichable)" onClick={() => update(setPoseSectionHidden(p, section, true), `Section « ${section} » masquée`)}><EyeOff size={15} /></button>}
               {cut.length > 0 && section !== "Masquées" && <button className="btn gold small" onClick={() => pasteInto(section)}><ClipboardPaste size={15} /> Coller ici ({cut.length})</button>}
               {selectMode && <button className="btn small" onClick={() => setPicked((cur) => [...new Set([...cur, ...list.map((i) => i.id)])])}>Sélectionner la section</button>}
