@@ -36,3 +36,18 @@ describe("ordre des sections photo", () => {
     expect(titles(movePoseSectionTo(p, "D", "B"))).toEqual(["A", "D", "B", "C"]);
   });
 });
+
+import { addPoseSection, parentTitleOf, poseSectionTitles } from "../src/poseSections";
+describe("sous-sections photo", () => {
+  it("range les sous-sections sous leur parent et les déplace avec lui", () => {
+    let p = { ...newProject("t"), items: [] as ReturnType<typeof makeItem>[] };
+    p = addPoseSection(p, "Accessoires");
+    p = addPoseSection(p, "Cortège");
+    p = addPoseSection(p, "Mariée", "Accessoires");
+    p = addPoseSection(p, "Marié", "Accessoires");
+    expect(poseSectionTitles(p)).toEqual(["Accessoires", "Mariée", "Marié", "Cortège"]);
+    expect(parentTitleOf(p, "Mariée")).toBe("Accessoires");
+    expect(poseSectionTitles(movePoseSectionTo(p, "Accessoires", "end"))).toEqual(["Cortège", "Accessoires", "Mariée", "Marié"]);
+    expect(poseSectionTitles(movePoseSectionTo(p, "Marié", "Mariée"))).toEqual(["Accessoires", "Marié", "Mariée", "Cortège"]);
+  });
+});

@@ -8,14 +8,72 @@ export function poseSectionTitles(project: Project): string[] {
   const configured = [...(project.poseSections ?? [])].sort((a, b) => a.order - b.order).map((section) => section.title);
   const present = project.items.filter((item) => item.module === "poses" && item.status !== "archivé").map(titleOf);
   const remaining = [...new Set(present)].filter((title) => !configured.includes(title));
-  return [...configured, ...remaining.filter((title) => poseCategories.includes(title)).sort((a, b) => poseCategories.indexOf(a) - poseCategories.indexOf(b)), ...remaining.filter((title) => !poseCategories.includes(title))];
+  const flat = [...configured, ...remaining.filter((title) => poseCategories.includes(title)).sort((a, b) => poseCategories.indexOf(a) - poseCategories.indexOf(b)), ...remaining.filter((title) => !poseCategories.includes(title))];
+  return regroup(project, flat);
 }
 
-export function addPoseSection(project: Project, title: string): Project {
+/** Titre de la section parente d'une sous-section (undefined pour une section de premier niveau). */
+export function parentTitleOf(project: Project, title: string): string | undefined {
+  const sections = project.poseSections ?? [];
+  const parentId = sections.find((s) => s.title === title)?.parentId;
+  return parentId ? sections.find((s) => s.id === parentId)?.title : undefined;
+}
+
+/** Chaque sous-section suit directement sa section parente. */
+function regroup(project: Project, flat: string[]): string[] {
+  const kidsOf = new Map<string, string[]>();
+  const tops: string[] = [];
+  for (const title of flat) {
+    const parent = parentTitleOf(project, title);
+    if (parent && flat.includes(parent)) kidsOf.set(parent, [...(kidsOf.get(parent) ?? []), title]);
+    else tops.push(title);
+  }
+  return tops.flatMap((top) => [top, ...(kidsOf.get(top) ?? [])]);
+}
+
+const blocks = (project: Project, titles: string[]) => {
+  const tops = titles.filter((t) => !parentTitleOf(project, t));
+  return { tops, kids: (top: string) => titles.filter((t) => parentTitleOf(project, t) === top) };
+};
+/** Nouvel ordre à plat après déplacement : une section de premier niveau emporte ses sous-sections, une sous-section reste chez son parent. */
+function relocate(project: Project, title: string, destination: string | "start" | "end"): string[] | null {
+  const titles = poseSectionTitles(project);
+  const { tops, kids } = blocks(project, titles);
+  const parent = parentTitleOf(project, title);
+  if (parent) {
+    const sibs = kids(parent);
+    const to = destination === "start" ? 0 : destination === "end" ? sibs.length - 1 : sibs.indexOf(destination);
+    if (to < 0 || sibs.indexOf(title) < 0) return null;
+    sibs.splice(sibs.indexOf(title), 1);
+    sibs.splice(to, 0, title);
+    return tops.flatMap((t) => (t === parent ? [t, ...sibs] : [t, ...kids(t)]));
+  }
+  const dest = destination === "start" || destination === "end" ? destination : parentTitleOf(project, destination) ?? destination;
+  const from = tops.indexOf(title);
+  const rest = tops.filter((t) => t !== title);
+  const to = dest === "start" ? 0 : dest === "end" ? rest.length : rest.indexOf(dest) + (from < tops.indexOf(dest) ? 1 : 0);
+  if (from < 0 || to < 0 || dest === title) return null;
+  rest.splice(to, 0, title);
+  return rest.flatMap((t) => [t, ...kids(t)]);
+}
+const writeOrder = (project: Project, titles: string[]): Project => {
+  const existing = new Map((project.poseSections ?? []).map((section) => [section.title, section]));
+  return { ...project, poseSections: titles.map((name, order) => ({ ...(existing.get(name) ?? { id: crypto.randomUUID(), title: name }), order })) };
+};
+
+export function addPoseSection(project: Project, title: string, parentTitle?: string): Project {
   const name = title.trim();
   if (!name || poseSectionTitles(project).includes(name) || name === "À faire absolument") return project;
-  const sections = project.poseSections ?? [];
-  return { ...project, poseSections: [...sections, { id: crypto.randomUUID(), title: name, order: sections.length }] };
+  let base = project;
+  let parentId: string | undefined;
+  if (parentTitle && !parentTitleOf(project, parentTitle) && parentTitle !== "À faire absolument") {
+    const known = (project.poseSections ?? []).find((s) => s.title === parentTitle);
+    parentId = known?.id ?? crypto.randomUUID();
+    if (!known) base = { ...project, poseSections: [...(project.poseSections ?? []), { id: parentId, title: parentTitle, order: (project.poseSections ?? []).length }] };
+  }
+  const sections = base.poseSections ?? [];
+  const next = { ...base, poseSections: [...sections, { id: crypto.randomUUID(), title: name, order: sections.length, ...(parentId ? { parentId } : {}) }] };
+  return writeOrder(next, poseSectionTitles(next));
 }
 
 export function renamePoseSection(project: Project, oldTitle: string, newTitle: string): Project {
@@ -34,7 +92,7 @@ export function removePoseSection(project: Project, title: string): Project {
   if (title === "Sans catégorie" || title === "À faire absolument") return project;
   return {
     ...project,
-    poseSections: (project.poseSections ?? []).filter((entry) => entry.title !== title),
+    poseSections: (project.poseSections ?? []).filter((entry) => entry.title !== title).map((entry) => (entry.parentId && (project.poseSections ?? []).find((x) => x.id === entry.parentId)?.title === title ? { ...entry, parentId: undefined } : entry)),
     items: project.items.map((item) => item.module === "poses" && titleOf(item) === title ? { ...item, category: undefined } : item),
   };
 }
@@ -48,25 +106,19 @@ export function setPoseSectionCollapsed(project: Project, title: string, collaps
 }
 
 export function movePoseSection(project: Project, title: string, step: -1 | 1): Project {
-  const titles = poseSectionTitles(project);
-  const index = titles.indexOf(title);
-  if (index < 0 || index + step < 0 || index + step >= titles.length) return project;
-  [titles[index], titles[index + step]] = [titles[index + step], titles[index]];
-  const existing = new Map((project.poseSections ?? []).map((section) => [section.title, section]));
-  const poseSections: ShotSection[] = titles.map((name, order) => ({ ...(existing.get(name) ?? { id: crypto.randomUUID(), title: name }), order }));
-  return { ...project, poseSections };
+  const parent = parentTitleOf(project, title);
+  const { tops, kids } = blocks(project, poseSectionTitles(project));
+  const peers = parent ? kids(parent) : tops;
+  const index = peers.indexOf(title);
+  const neighbour = peers[index + step];
+  if (index < 0 || !neighbour) return project;
+  const titles = relocate(project, title, neighbour);
+  return titles ? writeOrder(project, titles) : project;
 }
 
 /** Place une section à l'emplacement d'une autre : vers le haut elle passe avant, vers le bas après. `destination: "start" | "end"` : tout en haut / tout en bas. */
 export function movePoseSectionTo(project: Project, title: string, destination: string): Project {
-  const titles = poseSectionTitles(project);
-  const from = titles.indexOf(title);
-  if (from < 0 || title === destination) return project;
-  titles.splice(from, 1);
-  const to = destination === "start" ? 0 : destination === "end" ? titles.length : titles.indexOf(destination) + (from < poseSectionTitles(project).indexOf(destination) ? 1 : 0);
-  if (to < 0) return project;
-  titles.splice(to, 0, title);
-  const existing = new Map((project.poseSections ?? []).map((section) => [section.title, section]));
-  const poseSections: ShotSection[] = titles.map((name, order) => ({ ...(existing.get(name) ?? { id: crypto.randomUUID(), title: name }), order }));
-  return { ...project, poseSections };
+  if (title === destination) return project;
+  const titles = relocate(project, title, destination);
+  return titles ? writeOrder(project, titles) : project;
 }

@@ -276,3 +276,4 @@ body.tools-hidden .board-actions,body.tools-hidden .shot-toolbar{display:none}
 [data-reorder-section].is-over{outline:2px dashed var(--gold);outline-offset:4px;border-radius:12px}
 .pose-section-grip{padding:6px;min-width:32px;min-height:32px}
 .cut-bar ~ .select-bar{bottom:72px}.cut-bar{border-color:var(--gold)}
+.is-subsection{margin-left:18px;padding-left:12px;border-left:2px solid var(--gold-2)}.sub-parent{opacity:.6;font-weight:500}
