@@ -59,6 +59,7 @@ import Welcome from "./screens/Welcome";
 import Spatial from "./Spatial";
 import PreEdit from "./PreEdit";
 import SyncPanel from "./SyncPanel";
+import { useLiveSync } from "./liveSync";
 
 const RESUME = "visionnary-resume";
 /** Retient l'écran et la position de défilement ; à la réouverture on revient exactement où on s'était arrêté. */
@@ -194,6 +195,7 @@ function Shell() {
   const [mode, setMode] = useMode();
   const [theme, setTheme] = useTheme();
   const { w, project, toast, undo, redo, notify } = store;
+  useLiveSync(project);
 
   // ⌘Z / Ctrl+Z annule, ⇧⌘Z / Ctrl+Y rétablit — sauf pendant une saisie (le champ garde son propre historique).
   useEffect(() => {

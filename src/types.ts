@@ -85,6 +85,8 @@ export interface ActivityLogEntry {
 export interface Project {
   /** Journal léger des actions de l'équipe (qui a fait quoi, quand). */
   activity?: ActivityLogEntry[];
+  /** Salle de synchro en ligne (identifiant secret) : tous les appareils qui la partagent voient les mêmes validations. */
+  syncTopic?: string;
   alerts?: { enabled:boolean; sound:boolean; vibration:boolean; notifications:boolean; thresholds:number[] };
   id: string;
   name: string;

@@ -8,7 +8,7 @@ const BASE = "seed/andy-maeva-7k2q/";
 interface SeqClip { code: string; mission: string; folder: string; rank: number; n: number; dur: number; old: string; must: boolean; thumb: string }
 interface RefClip { code: string; index: number; title: string; stage: string; category: string; subject?: string; description?: string; movement?: string; framing?: string; effect?: string; drone?: boolean; priority: string; tags?: string; analysis_confidence?: string; source_video?: string; source_in?: string; source_out?: string; duration_s?: number; thumb: string }
 interface PoseSeed { id: string; title: string; section: string; subject: string; person: string; framing: string; favorite: boolean; essential: boolean; notes: string; images: string[] }
-interface Plan { couple: string; sequence: SeqClip[]; refs: RefClip[]; poses?: PoseSeed[]; poseSections?: { title: string; order: number; parent?: string; hidden?: boolean }[] }
+interface Plan { syncTopic?: string; couple: string; sequence: SeqClip[]; refs: RefClip[]; poses?: PoseSeed[]; poseSections?: { title: string; order: number; parent?: string; hidden?: boolean }[] }
 const POSE_ORDER = ["Choix de Maeva ★", "Préparatifs mariée", "Accessoires & détails", "Demoiselles d’honneur", "Préparatifs marié", "Garçons d’honneur", "Cortège", "Cérémonie", "Couple", "Photos de groupe", "Vin d'honneur", "Réception & détails", "Entrées", "Danse & soirée", "Gâteau"];
 
 const fileFrom = async (path: string, name: string) => {
@@ -39,6 +39,8 @@ export async function loadAndyMaevaPlan(w: Workspace, part: SeedPart, progress: 
       p.items.push(makeItem("team", title, { role, mission: role, order: n, ...(camera ? { camera, lenses } : {}), packKey: "seed-team:" + title }));
     });
   }
+  let topicAdded = false;
+  if (plan.syncTopic && !p.syncTopic) { p.syncTopic = plan.syncTopic; topicAdded = true; }
   const has = (prefix: string) => p.items.some((i) => String(i.packKey ?? "").startsWith(prefix));
   const jobs: { item: Item; path: string; name: string }[] = [];
   const fresh: Item[] = [];
@@ -81,7 +83,7 @@ export async function loadAndyMaevaPlan(w: Workspace, part: SeedPart, progress: 
       fresh.push(item);
     });
   }
-  if (!fresh.length) return { workspace: { ...w, activeProjectId: p.id, projects: existing ? w.projects.map((x) => (x.id === p.id ? p : x)) : [...w.projects, p] }, created: !existing };
+  if (!fresh.length) return { workspace: { ...w, activeProjectId: p.id, projects: existing ? w.projects.map((x) => (x.id === p.id ? p : x)) : [...w.projects, p] }, created: !existing || topicAdded };
   let done = 0;
   await pool(jobs, async (job) => {
     const media = await importMedia(await fileFrom(job.path, job.name), p.id, job.item.id);
