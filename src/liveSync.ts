@@ -41,7 +41,7 @@ const save = (topic: string, s: Saved) => { try { localStorage.setItem(storeKey(
 
 async function pull(topic: string, since: string) {
   const res = await fetch(`${NTFY}${topic}/json?poll=1&since=${since || "all"}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("synchro indisponible");
+  if (!res.ok) throw new Error("synchro indisponible " + res.status);
   const events: { id: string; message: string }[] = [];
   for (const line of (await res.text()).split("\n")) {
     if (!line.trim()) continue;
@@ -65,7 +65,7 @@ async function push(topic: string, entries: Record<string, [number, Vals]>, acti
   if (Object.keys(cur.d).length || cur.a.length) batches.push(cur);
   for (const b of batches) {
     const res = await fetch(NTFY + topic, { method: "POST", body: JSON.stringify(b) });
-    if (!res.ok) throw new Error("envoi impossible");
+    if (!res.ok) throw new Error("envoi impossible " + res.status);
   }
 }
 
@@ -140,7 +140,9 @@ export function useLiveSync(project: Project | undefined) {
     let stop = false;
     let first = true;
     let busy = false;
+    let pause = 0;
     const tick = async () => {
+      if (pause > 0) { pause--; return; }
       if (stop || busy || (typeof navigator !== "undefined" && navigator.onLine === false)) return;
       busy = true;
       try {
@@ -159,7 +161,7 @@ export function useLiveSync(project: Project | undefined) {
             }),
           });
         }
-      } catch { /* hors ligne : on réessaie au prochain tour */ }
+      } catch (e) { if (String((e as Error)?.message).includes("429")) pause = 8; /* limite du service : on attend */ }
       busy = false;
     };
     void tick();

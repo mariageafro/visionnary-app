@@ -21,7 +21,15 @@ export default function SeedLoader({ part = "video" }: { part?: "photo" | "video
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Screen title="Andy & Maeva">
-      <p className="notice">{error ? "Chargement interrompu : " + error : state.total ? `Chargement de la galerie… ${state.done}/${state.total} (une seule fois, ne quittez pas la page)` : "Préparation…"}</p>
+      <p className="notice" role="status">{error ? "Chargement interrompu : " + error : state.total ? `Chargement de la galerie… ${state.done}/${state.total} (une seule fois, ne quittez pas la page)` : "Préparation…"}</p>
+      {state.total > 0 && !error && <progress max={state.total} value={state.done} style={{ width: "100%" }} />}
+      {error && (
+        <div className="btn-row">
+          <button className="btn gold" onClick={() => location.reload()}>Réessayer</button>
+          <button className="btn" onClick={() => { try { indexedDB.deleteDatabase("visionnary-local"); } catch { /* ignoré */ } location.reload(); }}>Tout recharger à zéro</button>
+        </div>
+      )}
+      <p className="muted" style={{ fontSize: 12 }}>{typeof navigator !== "undefined" ? navigator.userAgent : ""}</p>
     </Screen>
   );
 }
