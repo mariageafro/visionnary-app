@@ -7,9 +7,9 @@ import { deleteMedia, listMedia } from "./storage";
 const BASE = "seed/andy-maeva-7k2q/";
 interface SeqClip { code: string; mission: string; folder: string; rank: number; n: number; dur: number; old: string; must: boolean; thumb: string }
 interface RefClip { code: string; index: number; title: string; stage: string; category: string; subject?: string; description?: string; movement?: string; framing?: string; effect?: string; drone?: boolean; priority: string; tags?: string; analysis_confidence?: string; source_video?: string; source_in?: string; source_out?: string; duration_s?: number; thumb: string }
+interface PoseExport { poses: Record<string, string | number | boolean>[]; media: { id: string; itemId: string; name: string }[]; sections: { id: string; title: string; order: number; parentId?: string; hidden?: boolean }[] }
 interface PoseSeed { id: string; title: string; section: string; subject: string; person: string; framing: string; favorite: boolean; essential: boolean; notes: string; images: string[] }
 interface Plan { syncTopic?: string; couple: string; sequence: SeqClip[]; refs: RefClip[]; poses?: PoseSeed[]; poseSections?: { title: string; order: number; parent?: string; hidden?: boolean }[] }
-const POSE_ORDER = ["Choix de Maeva ★", "Préparatifs mariée", "Accessoires & détails", "Demoiselles d’honneur", "Préparatifs marié", "Garçons d’honneur", "Cortège", "Cérémonie", "Couple", "Photos de groupe", "Vin d'honneur", "Réception & détails", "Entrées", "Danse & soirée", "Gâteau"];
 
 const fileFrom = async (path: string, name: string) => {
   const res = await fetch(BASE + path);
@@ -42,27 +42,37 @@ export async function loadAndyMaevaPlan(w: Workspace, part: SeedPart, progress: 
   let topicAdded = false;
   if (plan.syncTopic && !p.syncTopic) { p.syncTopic = plan.syncTopic; topicAdded = true; }
   const has = (prefix: string) => p.items.some((i) => String(i.packKey ?? "").startsWith(prefix));
-  const jobs: { item: Item; path: string; name: string }[] = [];
+  const jobs: { item: Item; path: string; name: string; old?: string }[] = [];
+  let pendingRemap: (() => void) | undefined;
   const fresh: Item[] = [];
-  if (part === "photo" && plan.poses?.length && !has("seed-pose2:")) {
-    // Ancienne version du chargement (avec des poses masquées) : on la remplace proprement.
-    const old = new Set(p.items.filter((i) => String(i.packKey ?? "").startsWith("seed-pose:")).map((i) => i.id));
+  const mediaMap = new Map<string, string>();
+  const firstMedia = new Map<string, string>();
+  if (part === "photo" && !p.items.some((i) => i.seedV === "3")) {
+    const full = (await (await fetch(BASE + "poses.json")).json()) as PoseExport;
+    // Anciennes versions du chargement (poses masquées absentes, sans favoris) : on les remplace proprement.
+    const old = new Set(p.items.filter((i) => /^seed-pose2?:/.test(String(i.packKey ?? ""))).map((i) => i.id));
     if (old.size) {
       for (const m of await listMedia(p.id)) if (old.has(m.itemId)) await deleteMedia(m.id);
       p.items = p.items.filter((i) => !old.has(i.id));
     }
-    plan.poses.forEach((pose, n) => {
-      const item = makeItem("poses", pose.title, {
-        order: n, category: pose.section, subjectGroup: pose.subject, packKey: "seed-pose2:" + pose.id,
-        ...(pose.person ? { person: pose.person } : {}), ...(pose.framing ? { framing: pose.framing } : {}),
-        ...(pose.favorite ? { favorite: true } : {}), ...(pose.essential ? { priority: "MUST HAVE" } : {}), notes: pose.notes && !pose.notes.startsWith("Référence") ? pose.notes : "",
-      });
-      pose.images.forEach((img, k) => jobs.push({ item, path: img, name: `${pose.id}-${k + 1}.jpg` }));
+    const ids = new Map(full.poses.map((x) => [String(x.id), crypto.randomUUID()]));
+    const remap = (v: unknown, map: Map<string, string>) => String(v ?? "").split(",").map((x) => map.get(x) ?? "").filter(Boolean).join(",");
+    full.poses.forEach((pose) => {
+      const { id: oid, ...fields } = pose;
+      const item = { ...makeItem("poses", String(fields.title)), ...fields, id: ids.get(String(oid))!, packKey: "seed-pose2:" + oid, seedV: "3" } as Item;
+      if (item.mergedInto) item.mergedInto = ids.get(String(item.mergedInto)) ?? "";
+      if (item.includes) item.includes = remap(item.includes, ids);
       fresh.push(item);
     });
-    const defs: { title: string; order: number; parent?: string }[] = (plan.poseSections ?? POSE_ORDER.map((title, order) => ({ title, order }))).filter((d) => plan.poses!.some((x) => x.section === d.title) || (plan.poseSections ?? []).some((c) => c.parent === d.title));
-    const ids = new Map(defs.map((d) => [d.title, crypto.randomUUID()]));
-    p.poseSections = defs.map((d) => ({ id: ids.get(d.title)!, title: d.title, order: d.order, ...(d.parent && ids.get(d.parent) ? { parentId: ids.get(d.parent) } : {}) }));
+    const byId = new Map(fresh.map((i) => [i.id, i]));
+    full.media.forEach((m) => jobs.push({ item: byId.get(ids.get(m.itemId)!)!, path: "ph/" + m.id + ".jpg", name: m.name || m.id + ".jpg", old: m.id }));
+    const secIds = new Map(full.sections.map((d) => [d.id, crypto.randomUUID()]));
+    p.poseSections = full.sections.map((d) => ({ id: secIds.get(d.id)!, title: d.title, order: d.order, ...(d.hidden ? { hidden: true } : {}), ...(d.parentId && secIds.get(d.parentId) ? { parentId: secIds.get(d.parentId) } : {}) }));
+    pendingRemap = () => fresh.forEach((i) => {
+      i.coverId = (i.coverId && mediaMap.get(String(i.coverId))) || firstMedia.get(i.id);
+      if (i.angleOrder) i.angleOrder = remap(i.angleOrder, mediaMap);
+      if (i.angleHidden) i.angleHidden = remap(i.angleHidden, mediaMap);
+    });
   }
   if (part === "video" && !has("seed:")) {
     plan.sequence.forEach((c) => {
@@ -87,9 +97,11 @@ export async function loadAndyMaevaPlan(w: Workspace, part: SeedPart, progress: 
   let done = 0;
   await pool(jobs, async (job) => {
     const media = await importMedia(await fileFrom(job.path, job.name), p.id, job.item.id);
-    if (!job.item.coverId) job.item.coverId = media.id;
+    if (job.old) { mediaMap.set(job.old, media.id); if (!firstMedia.has(job.item.id)) firstMedia.set(job.item.id, media.id); }
+    else if (!job.item.coverId) job.item.coverId = media.id;
     progress(++done, jobs.length);
   });
+  pendingRemap?.();
   p.items.push(...fresh);
   return { workspace: { ...w, activeProjectId: p.id, projects: existing ? w.projects.map((x) => (x.id === p.id ? p : x)) : [...w.projects, p] }, created: true };
 }
